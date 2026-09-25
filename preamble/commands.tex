@@ -1,0 +1,13 @@
+\newcommand{\cmd}[1]{\lr{\texttt{#1}}}
+\newcommand{\file}[1]{\lr{\texttt{#1}}}
+\newcommand{\en}[1]{\lr{#1}}
+\expandafter\def\expandafter\UrlBreaks\expandafter{\UrlBreaks\do\#}
+\Urlmuskip=0mu plus 3mu
+\newcommand{\q}[1]{«#1»}
+\newcommand{\bookfigure}[3][0.85]{%
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=#1\textwidth]{images/#2}
+    \caption{#3}
+  \end{figure}
+}

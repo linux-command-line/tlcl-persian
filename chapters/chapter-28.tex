@@ -1,0 +1,502 @@
+\chapter{خواندن ورودی از صفحه‌کلید}
+
+اسکریپت‌هایی که تا به این مرحله توسعه داده‌ایم، فاقد یکی از ویژگی‌های بنیادین نرم‌افزارهای مدرن، یعنی تعامل‌پذیری (\en{Interactivity}) هستند. تعامل‌پذیری به معنای توانایی برنامه در برقراری ارتباط دوطرفه با کاربر است. اگرچه بسیاری از ابزارهای سیستمی لینوکس نیازی به تعامل مستقیم ندارند، اما برخی برنامه‌ها برای عملکرد صحیح، به دریافت ورودی‌های لحظه‌ای از سوی کاربر وابسته‌اند.
+
+به عنوان نمونه، اسکریپت فصل گذشته را در نظر بگیرید:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# test-integer2: evaluate the value of an integer.
+
+INT=-5
+
+if [[ "$INT" =~ ^-?[0-9]+$ ]]; then
+    if [ "$INT" -eq 0 ]; then
+        echo "INT is zero."
+    else
+        if [ "$INT" -lt 0 ]; then
+            echo "INT is negative."
+        else
+            echo "INT is positive."
+        fi
+        if [ $((INT % 2)) -eq 0 ]; then
+            echo "INT is even."
+        else
+            echo "INT is odd."
+        fi
+    fi
+else
+    echo "INT is not an integer." >&2
+    exit 1
+fi
+\end{lstlisting}
+\end{latin}
+
+در ساختار فعلی، برای هر بار تغییر مقدار متغیر \cmd{INT} ناچار به ویرایش مستقیم کد منبع هستیم. بدیهی است که اگر اسکریپت بتواند مقدار مورد نظر را به صورت پویا از کاربر استعلام کند، کارایی و انعطاف‌پذیری آن به مراتب افزایش خواهد یافت. در این فصل، روش‌های افزودن لایه‌ی تعاملی به برنامه‌های پوسته را مورد بررسی قرار خواهیم داد.
+
+\section{دستور read: دریافت داده از ورودی استاندارد}
+
+فرمان داخلی \cmd{read} جهت خواندن یک سطر واحد از ورودی استاندارد (\en{stdin}) به کار می‌رود. این دستور هم برای دریافت داده‌های وارد شده از طریق صفحه‌کلید و هم برای خواندن اطلاعات از یک فایل (در صورت استفاده از هدایت ورودی یا \en{Redirection}) کاربرد دارد. ساختار کلی این دستور به شرح زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+read [-options] [variable...]
+\end{lstlisting}
+\end{latin}
+
+در این ساختار، \file{options} شامل یک یا چند مورد از گزینه‌های عملیاتی مندرج در جدول زیر بوده و \file{variable} معرف نام یک یا چند متغیری است که برای ذخیره‌سازی مقادیر ورودی تعیین می‌شوند. چنانچه هیچ نامی برای متغیر در نظر گرفته نشود، مفسر پوسته به‌صورت خودکار داده‌های دریافتی را در متغیر سیستمی \cmd{REPLY} ذخیره می‌کند.
+
+به طور کلی، \cmd{read} محتوای ورودی استاندارد را بر اساس نویسه‌های جداکننده (که به طور پیش‌فرض فاصله یا \en{Tab} هستند) تفکیک کرده و هر بخش را به ترتیب در متغیرهای ارائه شده قرار می‌دهد.
+
+ماهیت اصلی دستور \cmd{read} بر مبنای تخصیص فیلدهای ورودی استاندارد به متغیرهای تعیین‌شده است. اگر اسکریپت ارزیابی اعداد صحیح را به‌گونه‌ای بازنویسی کنیم که از قابلیت \cmd{read} بهره ببرد، ساختار آن به شکل زیر تغییر خواهد کرد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# read-integer: evaluate the value of an integer.
+
+echo -n "Please enter an integer -> "
+read int
+
+if [[ "$int" =~ ^-?[0-9]+$ ]]; then
+    if [ "$int" -eq 0 ]; then
+        echo "$int is zero."
+    else
+        if [ "$int" -lt 0 ]; then
+            echo "$int is negative."
+        else
+            echo "$int is positive."
+        fi
+        if [ $((int % 2)) -eq 0 ]; then
+            echo "$int is even."
+        else
+            echo "$int is odd."
+        fi
+    fi
+else
+    echo "Input value is not an integer." >&2
+    exit 1
+fi
+\end{lstlisting}
+\end{latin}
+
+در این کد، از دستور \cmd{echo} همراه با گزینه \cmd{-n} استفاده شده است تا با حذف نویسه‌ی خط جدید، اعلان ورودی (\en{Prompt}) در همان سطر باقی بماند. سپس دستور \cmd{read} مقدار وارد شده را در متغیر \cmd{int} ذخیره می‌کند. نمونه‌ای از اجرای این اسکریپت را در زیر مشاهده می‌کنید:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ read-integer
+Please enter an integer -> 5
+5 is positive.
+5 is odd.
+\end{lstlisting}
+\end{latin}
+
+علاوه بر این، \cmd{read} توانایی تخصیص ورودی به چندین متغیر را به صورت همزمان دارد. اسکریپت زیر این قابلیت را نمایش می‌دهد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# read-multiple: read multiple values from keyboard
+
+echo -n "Enter one or more values > "
+read var1 var2 var3 var4 var5
+
+echo "var1 = '$var1'"
+echo "var2 = '$var2'"
+echo "var3 = '$var3'"
+echo "var4 = '$var4'"
+echo "var5 = '$var5'"
+\end{lstlisting}
+\end{latin}
+
+رفتار مفسر پوسته در مواجهه با تعداد متغیرهای متفاوت در دستور \cmd{read} به شرح زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ read-multiple
+Enter one or more values > a b c d e
+var1 = 'a'
+var2 = 'b'
+var3 = 'c'
+var4 = 'd'
+var5 = 'e'
+[me@linuxbox ~]$ read-multiple
+Enter one or more values > a
+var1 = 'a'
+var2 = ''
+var3 = ''
+var4 = ''
+var5 = ''
+[me@linuxbox ~]$ read-multiple
+Enter one or more values > a b c d e f g
+var1 = 'a'
+var2 = 'b'
+var3 = 'c'
+var4 = 'd'
+var5 = 'e f g'
+\end{lstlisting}
+\end{latin}
+
+اگر تعداد مقادیر ورودی کمتر از متغیرهای تعریف شده باشد، متغیرهای باقی‌مانده تهی (\en{Empty}) می‌مانند. اما چنانچه تعداد ورودی‌ها از تعداد متغیرها بیشتر باشد، تمامی مقادیر اضافی به آخرین متغیر اختصاص می‌یابند.
+
+در صورتی که هیچ متغیری برای دستور \cmd{read} تعریف نشود، مفسر پوسته از متغیر پیش‌فرض \cmd{REPLY} برای ذخیره‌سازی کل خط ورودی استفاده می‌کند:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# read-single: read multiple values into default variable
+
+echo -n "Enter one or more values > "
+read
+
+echo "REPLY = '$REPLY'"
+\end{lstlisting}
+\end{latin}
+
+خروجی اجرای این اسکریپت بدین صورت خواهد بود:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ read-single
+Enter one or more values > a b c d
+REPLY = 'a b c d'
+\end{lstlisting}
+\end{latin}
+
+\section{گزینه‌های عملیاتی دستور read}
+
+دستور \cmd{read} از مجموعه‌ای از گزینه‌های کاربردی پشتیبانی می‌کند که در جدول زیر شرح داده شده‌اند. این گزینه‌ها امکان کنترل دقیق‌تر بر نحوه‌ی دریافت و پردازش ورودی را فراهم می‌سازند.
+
+\begin{table}[htbp]
+\centering
+\caption{گزینه‌های دستور \cmd{read}}
+\label{tab:read-options}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{گزینه} & \textbf{شرح عملکرد} \\
+\midrule
+\cmd{-a array} & ورودی را به‌صورت یک آرایه در متغیر \file{array} ذخیره می‌کند (شروع از اندیس صفر). مبحث آرایه‌ها در فصل ۳۵ بررسی خواهد شد. \\
+\addlinespace
+\cmd{-d delimiter} & نخستین کاراکتر رشته‌ی \file{delimiter} را به‌عنوان جداکننده‌ی ورودی (به‌جای نویسه‌ی خط جدید یا \en{Newline}) در نظر می‌گیرد. \\
+\addlinespace
+\cmd{-e} & کتابخانه‌ی \en{Readline} را برای مدیریت ورودی فعال می‌کند. این گزینه امکان ویرایش متن ورودی را مشابه محیط خط فرمان فراهم می‌آورد. \\
+\addlinespace
+\cmd{-i string} & رشته‌ی \file{string} را به‌عنوان مقدار پیش‌فرض تعیین می‌کند. در صورتی که کاربر بدون وارد کردن مقدار کلید \en{Enter} را فشار دهد، این مقدار جایگزین می‌شود (مستلزم استفاده هم‌زمان از گزینه‌ی \cmd{-e}). \\
+\addlinespace
+\cmd{-n num} & به‌جای خواندن یک خط کامل، تنها به تعداد \file{num} کاراکتر از ورودی دریافت می‌کند. \\
+\addlinespace
+\cmd{-p prompt} & رشته‌ی \file{prompt} را به‌عنوان پیام راهنما (اعلان) پیش از دریافت ورودی نمایش می‌دهد. \\
+\addlinespace
+\cmd{-r} & حالت خام (\en{Raw mode}) را فعال می‌کند؛ در این حالت، نویسه‌ی بک‌اسلش (\cmd{\textbackslash}) به‌عنوان نویسه‌ی گریز (\en{Escape}) تفسیر نمی‌شود. استفاده از این گزینه، به‌ویژه هنگام کار با مسیرهای ویندوزی، برای دقت و امنیت بیشتر توصیه می‌شود. \\
+\addlinespace
+\cmd{-s} & حالت بی‌صدا (\en{Silent mode}) را فعال می‌کند؛ نویسه‌های تایپ‌شده در خروجی نمایش داده نمی‌شوند. این ویژگی برای دریافت گذرواژه‌ها و اطلاعات حساس ضروری است. \\
+\addlinespace
+\cmd{-t seconds} & مهلت زمانی (\en{Timeout}) را تعیین می‌کند. اگر ورودی ظرف مدت \file{seconds} ثانیه دریافت نشود، دستور خاتمه یافته و وضعیت خروج (\en{Exit Status}) غیرصفر بازمی‌گرداند. \\
+\addlinespace
+\cmd{-u fd} & ورودی را از یک توصیف‌گر فایل (\file{fd}) مشخص، به‌جای ورودی استاندارد (\en{stdin})، دریافت می‌کند. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+با بهره‌گیری از گزینه‌های متنوع دستور \cmd{read} می‌توان قابلیت‌های پیشرفته و هوشمندی به اسکریپت‌ها افزود. برای نمونه، استفاده از گزینه‌ی \cmd{-p} نیاز به دستور \cmd{echo} را مرتفع کرده و پیام راهنما (\en{Prompt}) را مستقیماً نمایش می‌دهد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# read-single: read multiple values into default variable
+
+read -r -p "Enter one or more values > "
+
+echo "REPLY = '$REPLY'"
+\end{lstlisting}
+\end{latin}
+
+همچنین با ترکیب گزینه‌های \cmd{-t} و \cmd{-s} می‌توان اسکریپتی طراحی کرد که ورودی را به‌صورت محرمانه دریافت نموده و در صورت تأخیر کاربر، فرآیند را متوقف (\en{Timeout}) کند:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# read-secret: input a secret passphrase
+
+if read -r -t 10 -sp "Enter secret passphrase > " secret_pass; then
+    echo -e "\nSecret passphrase = '$secret_pass'"
+else
+    echo -e "\nInput timed out" >&2
+    exit 1
+fi
+\end{lstlisting}
+\end{latin}
+
+در این اسکریپت، برنامه ده ثانیه برای دریافت عبارت رمز منتظر می‌ماند. به دلیل استفاده از گزینه‌ی \cmd{-s} (\en{Silent mode})، کاراکترهای وارد شده توسط کاربر برای امنیت بیشتر در ترمینال نمایش داده نمی‌شوند. چنانچه زمان تعیین شده به پایان برسد، اسکریپت با ارسال پیام خطا به خطای استاندارد (\en{stderr}) خاتمه می‌یابد.
+
+علاوه بر این، می‌توان با استفاده‌ی هم‌زمان از گزینه‌های \cmd{-e} و \cmd{-i} برای کاربر یک پاسخ پیش‌فرض (\en{Default Value}) در نظر گرفت:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# read-default: supply a default value if user presses Enter key.
+
+read -e -p "What is your user name? " -i $USER
+echo "You answered: '$REPLY'"
+\end{lstlisting}
+\end{latin}
+
+در این نمونه، اسکریپت نام کاربری را استعلام کرده و با استفاده از متغیر محیطی \cmd{\$USER} یک مقدار پیش‌فرض را در خط فرمان قرار می‌دهد. کاربر می‌تواند این مقدار را ویرایش کرده یا صرفاً با فشردن کلید \en{Enter}، همان مقدار پیش‌فرض را تأیید و در متغیر \cmd{REPLY} ذخیره کند.
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ read-default
+What is your user name? me
+You answered: 'me'
+\end{lstlisting}
+\end{latin}
+
+\section{متغیر IFS: مدیریت جداکننده‌های داخلی فیلد}
+
+به‌طور معمول، مفسر پوسته عملیات تفکیک کلمات (\en{Word Splitting}) را بر روی ورودی‌های دستور \cmd{read} اعمال می‌کند. همان‌طور که پیش‌تر مشاهده کردیم، این ویژگی باعث می‌شود کلماتی که با یک یا چند فاصله از هم جدا شده‌اند، به عنوان فیلدهای مجزا شناسایی شده و به متغیرهای مختلف اختصاص یابند. این رفتار توسط متغیر سیستمی \cmd{IFS} (مخفف \en{Internal Field Separator}) کنترل می‌شود. مقدار پیش‌فرض این متغیر شامل کاراکترهای «فاصله» (\en{Space})، «تب» (\en{Tab}) و «خط جدید» (\en{Newline}) است.
+
+ما می‌توانیم با تغییر مقدار \cmd{IFS} به‌صورت موقت، نحوه‌ی تفکیک فیلدها در دستور \cmd{read} را شخصی‌سازی کنیم. برای مثال، در فایل سیستمی \file{/etc/passwd} از کاراکتر «دو نقطه» (\cmd{:}) برای جداسازی فیلدها استفاده شده است. با تنظیم \cmd{IFS} بر روی این کاراکتر، می‌توان محتوای این فایل را به‌دقت پیمایش کرد و هر بخش را در متغیری جداگانه قرار داد.
+
+اسکریپت زیر نحوه اجرای این فرآیند را نشان می‌دهد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# read-ifs: read fields from a file
+
+FILE=/etc/passwd
+
+read -r -p "Enter a username > " user_name
+
+file_info="$(grep "^$user_name:" $FILE)"
+
+if [ -n "$file_info" ]; then
+    IFS=":" read -r user pw uid gid name home shell <<< "$file_info"
+    echo "User =      '$user'"
+    echo "UID =       '$uid'"
+    echo "GID =       '$gid'"
+    echo "Full Name = '$name'"
+    echo "Home Dir. = '$home'"
+    echo "Shell =     '$shell'"
+else
+    echo "No such user '$user_name'" >&2
+    exit 1
+fi
+\end{lstlisting}
+\end{latin}
+
+این اسکریپت نام کاربری را از کاربر دریافت کرده و پس از جستجو در فایل \file{/etc/passwd} به کمک دستور \cmd{grep} و یافتن رکورد مربوطه، فیلدهای مختلف (مانند شناسه‌ی کاربری، شناسه‌ی گروه، نام کامل و مسیر دایرکتوری خانگی) را با دقت استخراج و نمایش می‌دهد. نکته‌ی فنی مهم در این اسکریپت، مقداردهی \cmd{IFS} در همان خطِ دستور \cmd{read} است؛ این رویکرد باعث می‌شود تغییر جداکننده صرفاً برای همان دستور اعمال شود و بر رفتار سایر بخش‌های اسکریپت تأثیری نگذارد.
+
+در تحلیل این اسکریپت، دو خط کلیدی وجود دارد که نشان‌دهنده‌ی تکنیک‌های پیشرفته در پردازش متن هستند. خط نخست به شرح زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+file_info=$(grep "^$user_name:" $FILE)
+\end{lstlisting}
+\end{latin}
+
+این دستور خروجی استاندارد حاصل از اجرای \cmd{grep} را در متغیر \cmd{file\_info} ذخیره می‌کند. استفاده از عبارت باقاعده (\en{Regular Expression}) به صورت \cmd{\^{}\$user\_name:} تضمین می‌کند که جستجو دقیقاً از ابتدای سطر آغاز شده و نام کاربری با جداکننده‌ی دو‌نقطه خاتمه یابد؛ این امر از انطباق‌های اشتباه (مانند یافتن نام کاربری \en{"user"} در دلِ \en{"user1"}) جلوگیری می‌کند.
+
+خط کلیدی دوم که ساختاری فشرده‌تر دارد:
+
+\begin{latin}
+\begin{lstlisting}
+IFS=":" read -r user pw uid gid name home shell <<< "$file_info"
+\end{lstlisting}
+\end{latin}
+
+این خط از سه مؤلفه‌ی متمایز تشکیل شده است: یک مقداردهی اولیه، یک دستور \cmd{read} با چندین آرگومان، و یک عملگر عجیب و جدید بازهدایت به نام \en{Here String}.
+
+در مفسر پوسته، امکان مقداردهی به یک یا چند متغیر بلافاصله پیش از فراخوانی یک دستور وجود دارد. این تخصیص‌ها، محیط اجرای (\en{Execution Environment}) آن دستور خاص را تغییر می‌دهند. نکته‌ی حائز اهمیت این است که این تغییر کاملاً موقتی بوده و پس از اتمام اجرای دستور مذکور، متغیرهای پوسته به وضعیت پیشین خود بازمی‌گردند. در اینجا، مقدار \cmd{IFS} منحصراً برای اجرای همین دستور \cmd{read} به کاراکتر دو‌نقطه تغییر یافته است.
+
+روش جایگزین و طولانی‌تر برای دستیابی به این هدف، به شکل زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+OLD_IFS="$IFS"
+IFS=":"
+read user pw uid gid name home shell <<< "$file_info"
+IFS="$OLD_IFS"
+\end{lstlisting}
+\end{latin}
+
+در این رویکرد، ابتدا مقدار اصلی \cmd{IFS} پشتیبان‌گیری شده، سپس مقدار جدید اختصاص می‌یابد و در نهایت پس از اجرای عملیات، مقدار اولیه بازیابی می‌گردد. بدیهی است که قرار دادن تخصیص متغیر در ابتدای سطر دستور، روشی بهینه‌تر و کوتاه‌تر برای مدیریت محیط اجرای دستورات در لینوکس محسوب می‌شود.
+
+عملگر \cmd{<<<} معرف یک \en{Here String} است. این ساختار شباهت زیادی به \en{Here Document} دارد، با این تفاوت که بسیار کوتاه‌تر بوده و تنها یک رشته‌ی واحد را شامل می‌شود. در مثال مورد بحث، ما با استفاده از این عملگر، خط استخراج‌شده از فایل \file{/etc/passwd} را مستقیماً به ورودی استاندارد (\en{stdin}) دستور \cmd{read} ارسال کردیم. اکنون این پرسش مطرح می‌شود که چرا از روش متداول‌تر و آشناتری مانند پایپ (\en{pipe}) استفاده نکردیم؟
+
+\begin{latin}
+\begin{lstlisting}
+echo "$file_info" | IFS=":" read user pw uid gid name home shell
+\end{lstlisting}
+\end{latin}
+
+پاسخ این پرسش به یکی از چالش‌های فنی و در عین حال حیاتی در معماری پوسته بازمی‌گردد.
+
+\section{محدودیت اجرای read در پایپ‌لاین (Pipeline)}
+
+اگرچه دستور \cmd{read} ورودی خود را از ورودی استاندارد دریافت می‌کند، اما استفاده از آن در انتهای یک پایپ به شکل زیر عملاً بی‌نتیجه است:
+
+\begin{latin}
+\begin{lstlisting}
+echo "foo" | read
+\end{lstlisting}
+\end{latin}
+
+در ظاهر، دستور بدون خطا اجرا می‌شود، اما متغیر \cmd{REPLY} همواره خالی باقی می‌ماند. علت این پدیده به نحوه مدیریت فرآیندهای فرزند یا \en{Subshell}ها توسط \en{Bash} مربوط می‌شود. در ساختار پایپ‌لاین، هر دستور در یک محیط ایزوله به نام \en{subshell} اجرا می‌گردد که کپی مجزایی از محیط پوسته اصلی است.
+
+در سیستم‌های شبه‌یونیکس، یک \en{subshell} هرگز نمی‌تواند محیط فرآیند والد (\en{Parent Process}) خود را تغییر دهد. وقتی دستور \cmd{read} در انتهای یک پایپ قرار می‌گیرد، متغیرها را در محیطِ همان \en{subshell} مقداردهی می‌کند. به محض پایان اجرای دستور، آن محیط و تمامی متغیرهای تعریف‌شده در آن (از جمله \cmd{REPLY}) نابود می‌شوند و هیچ اثری از آن‌ها در پوسته اصلی باقی نمی‌ماند.
+
+استفاده از \en{Here Strings} یکی از راهکارهای هوشمندانه برای دور زدن این محدودیت و ارسال داده به \cmd{read} بدون ایجاد \en{subshell} است. تکنیک‌های دیگری برای مدیریت این رفتار در فصل ۳۶ مورد بررسی قرار خواهد گرفت.
+
+\section{اعتبارسنجی ورودی}
+
+دستیابی به قابلیت دریافت ورودی از کاربر، چالش جدیدی را در برنامه‌نویسی پدید می‌آورد: اعتبارسنجی ورودی. تفاوت بنیادین میان یک نرم‌افزار حرفه‌ای و یک برنامه‌ی ضعیف، در شیوه‌ی مواجهه‌ی آن با شرایط غیرمنتظره است؛ شرایطی که اغلب در قالب ورودی‌های نامعتبر بروز می‌کنند. در فصل گذشته، با بررسی اعداد صحیح و پالایش کاراکترهای غیرعددی، گام‌های نخست را در این مسیر برداشتیم. تکرار این دست بررسی‌ها در هر مرحله از دریافت ورودی، برای محافظت از پایداری برنامه در برابر داده‌های مخرب یا اشتباه، حیاتی است.
+
+این موضوع در اسکریپت‌هایی که توسط کاربران متعدد استفاده می‌شوند، اهمیت دوچندان می‌یابد. شاید در برنامه‌های شخصی که تنها یک‌بار توسط نویسنده برای هدفی خاص اجرا می‌شوند، بتوان از برخی تدابیر حفاظتی چشم‌پوشی کرد؛ اما اگر اسکریپت وظایف حساسی همچون حذف فایل‌ها را بر عهده داشته باشد، حتی برای استفاده‌ی شخصی نیز افزودن لایه‌های اعتبارسنجی، اقدامی خردمندانه و پیشگیرانه است.
+
+در ادامه، نمونه‌ای از یک برنامه‌ی جامع برای اعتبارسنجی انواع مختلف ورودی ارائه شده است:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# read-validate: validate input
+
+invalid_input() {
+    echo "Invalid input '$REPLY'" >&2
+    exit 1
+}
+
+read -r -p "Enter a single item > "
+
+# input is empty (invalid)
+[[ -z "$REPLY" ]] && invalid_input
+# input is multiple items (invalid)
+(( "$(echo "$REPLY" | wc -w)" > 1 )) && invalid_input
+
+# is input a valid filename?
+if [[ "$REPLY" =~ ^[-[:alnum:]\._]+$ ]]; then
+    echo "'$REPLY' is a valid filename."
+    if [[ -e "$REPLY" ]]; then
+        echo "And file '$REPLY' exists."
+    else
+        echo "However, file '$REPLY' does not exist."
+    fi
+
+    # is input a floating point number?
+    if [[ "$REPLY" =~ ^-?[[:digit:]]*\.[[:digit:]]+$ ]]; then
+         echo "'$REPLY' is a floating point number."
+    else
+         echo "'$REPLY' is not a floating point number."
+    fi
+
+    # is input an integer?
+    if [[ "$REPLY" =~ ^-?[[:digit:]]+$ ]]; then
+         echo "'$REPLY' is an integer."
+    else
+         echo "'$REPLY' is not an integer."
+    fi
+else
+    echo "The string '$REPLY' is not a valid filename."
+fi
+\end{lstlisting}
+\end{latin}
+
+این اسکریپت با دریافت یک ورودی از کاربر، آن را از فیلترهای تحلیلی مختلف عبور می‌دهد تا ماهیت داده را مشخص کند. همان‌طور که ملاحظه می‌کنید، این برنامه ترکیبی از مفاهیم کلیدی است که تاکنون آموخته‌ایم: از توابع پوسته و ساختارهای شرطی \cmd{[[ ]]} و \cmd{(( ))} گرفته تا عملگرهای کنترلی \cmd{\&\&} و بهره‌گیری هوشمندانه از عبارات باقاعده (\en{Regular Expressions}).
+
+\section{سیستم‌های تعاملی مبتنی بر منو}
+
+یکی از الگوهای رایج در طراحی رابط‌های کاربری متنی، مدل منو-محور (\en{Menu-driven}) است. در این شیوه، فهرستی از گزینه‌های عملیاتی به کاربر ارائه شده و برنامه منتظر انتخاب یکی از آن‌ها می‌ماند. برای نمونه، می‌توان ساختاری مشابه زیر را برای یک ابزار مدیریتی تصور کرد:
+
+\begin{latin}
+\begin{lstlisting}
+Please Select:
+1. Display System Information
+2. Display Disk Space
+3. Display Home Space Utilization
+0. Quit
+
+Enter selection [0-3] >
+\end{lstlisting}
+\end{latin}
+
+با بهره‌گیری از منطق برنامه‌ی \cmd{sys\_info\_page} و ترکیب آن با دستور \cmd{read} و ساختارهای شرطی، می‌توانیم یک اسکریپت منو-محور برای مدیریت سیستم طراحی کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# read-menu: a menu driven system information program
+
+clear
+echo "
+Please Select:
+
+1. Display System Information
+2. Display Disk Space
+3. Display Home Space Utilization
+0. Quit
+"
+read -r -p "Enter selection [0-3] > "
+
+if [[ "$REPLY" =~ ^[0-3]$ ]]; then
+    if [[ "$REPLY" == 0 ]]; then
+        echo "Program terminated."
+        exit
+    fi
+    if [[ "$REPLY" == 1 ]]; then
+        echo "Hostname: $HOSTNAME"
+        uptime
+        exit
+    fi
+    if [[ "$REPLY" == 2 ]]; then
+        df -h
+        exit
+    fi
+    if [[ "$REPLY" == 3 ]]; then
+        if [[ "$(id -u)" -eq 0 ]]; then
+            echo "Home Space Utilization (All Users)"
+            du -sh /home/*
+        else
+            echo "Home Space Utilization ($USER)"
+            du -sh "$HOME"
+        fi
+        exit
+     fi
+else
+     echo "Invalid entry." >&2
+     exit 1
+fi
+\end{lstlisting}
+\end{latin}
+
+این اسکریپت از نظر ساختاری به دو فاز اصلی تقسیم می‌شود: در فاز نخست، رابط کاربری با استفاده از \cmd{echo} ترسیم شده و ورودی کاربر توسط \cmd{read} دریافت می‌گردد. در فاز دوم، صحت ورودی با یک عبارت باقاعده (\cmd{\^{}[0-3]\$}) بررسی شده و در صورت تایید، عملیات متناظر با شماره‌ی انتخابی اجرا می‌شود.
+
+نکته‌ی فنی قابل تأمل در این اسکریپت، استفاده از دستور \cmd{exit} پس از هر بلوک عملیاتی است. این کار برای جلوگیری از سرایت اجرای کد به بخش‌های غیرمرتبط و پایان سریع برنامه پس از انجام وظیفه صورت گرفته است. اگرچه وجود چندین نقطه‌ی خروج (\en{Exit Points}) در برنامه‌نویسی سطح بالا به دلیل پیچیده کردن اشکال‌زدایی منطقی توصیه نمی‌شود، اما در اسکریپت‌های خطی و ساده‌ی پوسته، روشی مؤثر برای کنترل جریان برنامه محسوب می‌شود.
+
+\section{جمع‌بندی}
+
+در این فصل، با فراگیری شیوه‌ی دریافت داده‌ها از طریق صفحه‌کلید، نخستین گام‌های اساسی را در جهت تعاملی کردن اسکریپت‌ها برداشتیم. ترکیب تکنیک‌های آموخته‌شده با دستوراتِ پیشین، امکان طراحی ابزارهای قدرتمندی همچون واسط‌های کاربری ساده (\en{Front-end}) برای ابزارهای پیچیده‌ی خط فرمان را فراهم می‌سازد. در فصل آینده، با تکیه بر مفهوم برنامه‌های منو-محور، به بهبود ساختار و کارایی آن‌ها خواهیم پرداخت.
+
+\section{تمرین‌های تکمیلی}
+
+مطالعه‌ی دقیق ساختار منطقی اسکریپت‌های این فصل و درک عمیق آن‌ها پیش‌نیاز ورود به مباحث پیچیده‌تر آتی است. به عنوان یک تمرین فنی، تلاش کنید برنامه‌های این فصل را به‌گونه‌ای بازنویسی کنید که به جای ساختار مدرن \cmd{[[ ]]} از دستور سنتی \cmd{test} استفاده کنند.
+
+\textbf{راهنمای تمرین:} برای اعتبارسنجی عبارات باقاعده (\en{Regular Expressions}) در دستور \cmd{test} (که مستقیماً از آن‌ها پشتیبانی نمی‌کند)، می‌توانید از دستور \cmd{grep} یا \cmd{sed} استفاده کرده و سپس وضعیت خروجی (\en{Exit Status}) آن را مورد ارزیابی قرار دهید. این تمرین دیدگاه عمیق‌تری نسبت به سازگاری اسکریپت‌ها به شما خواهد داد.
+
+\section{منابع مطالعه تکمیلی}
+
+راهنمای مرجع \en{Bash} شامل فصلی درباره دستورات داخلی (\en{builtins}) است که دستور \cmd{read} را نیز در بر می‌گیرد:
+
+\begin{latin}
+\url{http://www.gnu.org/software/bash/manual/bashref.html#Bash-Builtins}
+\end{latin}

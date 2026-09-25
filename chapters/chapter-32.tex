@@ -1,0 +1,691 @@
+\chapter{پارامترهای موقعیتی (Positional Parameters)}
+
+یکی از قابلیت‌های کلیدی که تاکنون در اسکریپت‌های ما به آن پرداخته نشده بود، توانایی دریافت و پردازش گزینه‌ها (\en{Options}) و آرگومان‌های (\en{Arguments}) ورودی از طریق خط فرمان است. در این فصل، مکانیزم‌های داخلی پوسته را بررسی خواهیم کرد که به برنامه‌های ما اجازه می‌دهد به محتوای درج شده در خط فرمان دسترسی مستقیم داشته باشند.
+
+\section{دسترسی به محتوای خط فرمان}
+
+پوسته مجموعه‌ای از متغیرهای ویژه را در اختیار ما قرار می‌دهد که تحت عنوان پارامترهای موقعیتی شناخته می‌شوند. این متغیرها کلمات مجزای موجود در خط فرمان را بر اساس جایگاه عددی آن‌ها نگاشت می‌کنند. نام‌گذاری این پارامترها از \cmd{\$0} آغاز شده و تا \cmd{\$9} ادامه می‌یابد. نحوه تخصیص این متغیرها را می‌توان با اسکریپت زیر نمایش داد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# posit-param: script to view command line parameters
+
+echo "
+\$0 = $0
+\$1 = $1
+\$2 = $2
+\$3 = $3
+\$4 = $4
+\$5 = $5
+\$6 = $6
+\$7 = $7
+\$8 = $8
+\$9 = $9
+"
+\end{lstlisting}
+\end{latin}
+
+این اسکریپت ساده، مقادیر ذخیره‌شده در متغیرهای \cmd{\$0} تا \cmd{\$9} را چاپ می‌کند. چنانچه اسکریپت بدون هیچ آرگومان ورودی اجرا شود، خروجی به شرح زیر خواهد بود:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ posit-param
+
+$0 = /home/me/bin/posit-param
+$1 =
+$2 =
+$3 =
+$4 =
+$5 =
+$6 =
+$7 =
+$8 =
+$9 =
+\end{lstlisting}
+\end{latin}
+
+حتی در صورت عدم ارائه آرگومان، متغیر \cmd{\$0} همواره حاوی نخستین عبارت درج شده در خط فرمان است که همان مسیر (\en{Path}) فایل اجرایی اسکریپت می‌باشد. با ارسال آرگومان‌های ورودی، نتایج به‌صورت زیر تغییر می‌کند:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ posit-param a b c d
+
+$0 = /home/me/bin/posit-param
+$1 = a
+$2 = b
+$3 = c
+$4 = d
+$5 =
+$6 =
+$7 =
+$8 =
+$9 =
+\end{lstlisting}
+\end{latin}
+
+\begin{note}
+\textbf{نکته:} شما می‌توانید به بیش از ۹ پارامتر نیز دسترسی داشته باشید. برای فراخوانی پارامترهای دورقمی یا بالاتر، باید از ساختار بسط پارامتر (\en{Parameter Expansion}) استفاده کرده و عدد مورد نظر را درون آکولاد قرار دهید؛ به عنوان مثال: \cmd{\$\{10\}}، \cmd{\$\{55\}} یا \cmd{\$\{211\}}.
+\end{note}
+
+\section{شمارش تعداد آرگومان‌های ورودی}
+
+پوسته \en{Bash} علاوه بر نگاشت موقعیتی، متغیر ویژه‌ای به نام \cmd{\$\#} را در اختیار توسعه‌دهنده قرار می‌دهد که وظیفه آن ذخیره‌سازی تعداد کل آرگومان‌های ارسالی در خط فرمان است:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# posit-param: script to view command line parameters
+
+echo "
+Number of arguments: $#
+\$0 = $0
+\$1 = $1
+\$2 = $2
+\$3 = $3
+\$4 = $4
+\$5 = $5
+\$6 = $6
+\$7 = $7
+\$8 = $8
+\$9 = $9
+"
+\end{lstlisting}
+\end{latin}
+
+هنگام اجرای اسکریپت با آرگومان‌های نمونه، خروجی به شکل زیر تولید می‌شود:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ posit-param a b c d
+
+Number of arguments: 4
+$0 = /home/me/bin/posit-param
+$1 = a
+$2 = b
+$3 = c
+$4 = d
+$5 =
+$6 =
+$7 =
+$8 =
+$9 =
+\end{lstlisting}
+\end{latin}
+
+در این مثال، مقدار متغیر \cmd{\$\#} برابر با ۴ است، چرا که چهار آرگومان (\cmd{a}، \cmd{b}، \cmd{c}، \cmd{d}) پس از نام اسکریپت درج شده‌اند. توجه داشته باشید که خودِ نام اسکریپت (\cmd{\$0}) در شمارش تعداد آرگومان‌ها توسط \cmd{\$\#} لحاظ نمی‌شود. این متغیر ابزاری حیاتی برای بررسی صحت ورودی‌ها و اطمینان از دریافت تعداد کافی پارامترها پیش از اجرای بدنه اصلی برنامه است.
+
+\section{دستور shift: مدیریت و پردازش آرگومان‌های حجیم}
+
+در سناریوهایی که تعداد آرگومان‌های ورودی به اسکریپت بسیار زیاد است، دسترسی مستقیم به تک‌تک پارامترها دشوار می‌شود. برای مثال، در دستور زیر:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ posit-param *
+
+Number of arguments: 82
+$0 = /home/me/bin/posit-param
+$1 = addresses.ldif
+$2 = bin
+$3 = bookmarks.html
+$4 = debian-500-i386-netinst.iso
+$5 = debian-500-i386-netinst.jigdo
+$6 = debian-500-i386-netinst.template
+$7 = debian-cd_info.tar.gz
+$8 = Desktop
+$9 = dirlist-bin.txt
+\end{lstlisting}
+\end{latin}
+
+در این محیط نمونه، نویسه جانشین (\en{Wildcard}) \cmd{*} به ۸۲ آرگومان مجزا بسط یافته است. برای پردازش این حجم از داده، پوسته \en{Bash} مکانیزمی تحت عنوان دستور \cmd{shift} را ارائه می‌دهد. با هر بار اجرای این دستور، تمامی پارامترهای موقعیتی یک گام به سمت پایین انتقال می‌یابند؛ بدین معنا که مقدار موجود در \cmd{\$2} به \cmd{\$1} منتقل شده، \cmd{\$3} جایگزین \cmd{\$2} می‌شود و این روند تا انتها ادامه می‌یابد (لازم به ذکر است که \cmd{\$0} تحت تأثیر این دستور قرار نمی‌گیرد).
+
+با استفاده از این تکنیک، می‌توان کل آرگومان‌ها را تنها با ارجاع به پارامتر \cmd{\$1} پردازش کرد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# posit-param2: script to display all arguments
+
+count=1
+
+while [[ $# -gt 0 ]]; do
+    echo "Argument $count = $1"
+    count=$((count + 1))
+    shift
+done
+\end{lstlisting}
+\end{latin}
+
+در اسکریپت \cmd{posit-param2} فوق، یک حلقه \cmd{while} ایجاد شده است که تا زمان وجود حداقل یک آرگومان در صف (بررسی شرط \cmd{\$\# -gt 0}) به کار خود ادامه می‌دهد. در هر تکرار، آرگومان جاری (که همواره در \cmd{\$1} قرار دارد) نمایش داده می‌شود، متغیر \cmd{count} برای پیگیری شمارش افزایش یافته و در نهایت با دستور \cmd{shift}، آرگومان بعدی جایگزین مقدار قبلی در \cmd{\$1} می‌گردد. همچنین مقدار متغیر \cmd{\$\#} (تعداد کل آرگومان‌ها) پس از هر \cmd{shift} یک واحد کاهش می‌یابد.
+
+خروجی اجرای برنامه به صورت زیر خواهد بود:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ posit-param2 a b c d
+Argument 1 = a
+Argument 2 = b
+Argument 3 = c
+Argument 4 = d
+\end{lstlisting}
+\end{latin}
+
+این روش، راهکاری بهینه برای پیمایش در لیست‌های طولانی از پارامترهاست، بدون آنکه نیاز باشد به صورت دستی نام پارامترهای موقعیتی را تغییر دهیم.
+
+\section{کاربردهای مقدماتی}
+
+حتی بدون بهره‌گیری از دستور \cmd{shift}، می‌توان برنامه‌های کاربردی مؤثری با استفاده از پارامترهای موقعیتی طراحی کرد. به عنوان نمونه، اسکریپت زیر برای استخراج و نمایش اطلاعات فنی یک فایل تدوین شده است:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# file-info: simple file information program
+
+PROGNAME="$(basename "$0")"
+
+if [[ -e "$1" ]]; then
+    echo -e "\nFile Type:"
+    file "$1"
+    echo -e "\nFile Status:"
+    stat "$1"
+else
+    echo "$PROGNAME: usage: $PROGNAME file" >&2
+    exit 1
+fi
+\end{lstlisting}
+\end{latin}
+
+این برنامه نوع فایل (با استفاده از ابزار \cmd{file}) و وضعیت فایل (با دستور \cmd{stat}) را برای ورودی مشخص‌شده نمایش می‌دهد. یکی از نکات حائز اهمیت در این اسکریپت، تعریف متغیر \cmd{PROGNAME} است. این متغیر خروجی دستور \cmd{basename "\$0"} را در خود ذخیره می‌کند.
+
+دستور \cmd{basename} وظیفه دارد پیشوند مسیر (\en{Path}) را حذف کرده و تنها نام اصلی فایل را باقی بگذارد. در اینجا، این دستور بخش ابتدایی مسیر کامل ذخیره‌شده در پارامتر \cmd{\$0} را حذف می‌کند تا فقط نام خودِ اسکریپت به دست آید. استفاده از این تکنیک در پیام‌های راهنما (\en{Usage Messages}) بسیار هوشمندانه است؛ چرا که اگر نام فایل اسکریپت تغییر کند، پیام‌های خطا و راهنما به‌صورت خودکار با نام جدید به‌روزرسانی می‌شوند و نیازی به تغییر دستی کد نخواهد بود.
+
+\section{پارامترهای موقعیتی در توابع پوسته}
+
+همان‌گونه که پارامترهای موقعیتی برای انتقال آرگومان‌ها به اسکریپت‌های پوسته به کار می‌روند، می‌توان از آن‌ها برای ارسال ورودی به توابع (\en{Functions}) نیز استفاده کرد. برای درک بهتر این موضوع، اسکریپت \cmd{file\_info} را به یک تابع بازنویسی می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+file_info () {
+
+    # file_info: function to display file information
+
+    if [[ -e "$1" ]]; then
+        echo -e "\nFile Type:"
+        file "$1"
+        echo -e "\nFile Status:"
+        stat "$1"
+    else
+        echo "$FUNCNAME: usage: $FUNCNAME file" >&2
+        return 1
+    fi
+}
+\end{lstlisting}
+\end{latin}
+
+در این ساختار، چنانچه اسکریپت اصلی تابع \cmd{file\_info} را با یک نام فایل فراخوانی کند، آن آرگومان مستقیماً به پارامتر \cmd{\$1} در دامنه (\en{Scope}) تابع منتقل می‌شود. این قابلیت امکان طراحی توابع ماژولار و قابل استفاده مجدد را فراهم می‌سازد که نه تنها در اسکریپت‌های پیچیده، بلکه در فایل پیکربندی \file{.bashrc} برای استفاده در خط فرمان نیز بسیار سودمند است.
+
+نکته حائز اهمیت، جایگزینی متغیر \cmd{PROGNAME} با متغیر سیستمی \cmd{\$FUNCNAME} است. پوسته به صورت خودکار مقدار این متغیر را با نام تابع در حال اجرا به‌روزرسانی می‌کند. باید توجه داشت که در داخل یک تابع، متغیر \cmd{\$0} همچنان حاوی نام یا مسیر خودِ اسکریپت اصلی است و برخلاف انتظار، نام تابع را برنمی‌گرداند؛ لذا برای اشاره به نام تابع در پیام‌های خطا یا راهنما، استفاده از \cmd{\$FUNCNAME} الزامی است.
+
+\section{مدیریت یکپارچه پارامترهای موقعیتی}
+
+در برخی سناریوها، مدیریت گروهی تمامی پارامترهای موقعیتی ضرورت می‌یابد؛ برای نمونه، هنگام نگارش یک اسکریپت واسط (\en{Wrapper})، این ضرورت به خوبی احساس می‌گردد. اسکریپت‌های واسط، توابع یا اسکریپت‌هایی هستند که فراخوانی برنامه‌های دیگر را تسهیل می‌کنند؛ بدین صورت که مجموعه‌ای از گزینه‌های پیچیده را پردازش کرده و سپس فهرست آرگومان‌ها را به برنامه اصلی (سطح پایین‌تر) ارجاع می‌دهند.
+
+پوسته برای این هدف، دو پارامتر ویژه ارائه می‌دهد. هر دو متغیر به فهرست کامل پارامترهای موقعیتی بسط می‌یابند، اما تفاوت‌های عملکردی ظریفی دارند که در جدول زیر تشریح شده است:
+
+\begin{table}[htbp]
+\centering
+\caption{پارامترهای ویژه \cmd{\$\*} و \cmd{\$\@}}
+\label{tab:special-params}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{پارامتر} & \textbf{شرح عملکرد} \\
+\midrule
+\cmd{\$\*} & به تمامی پارامترها از \cmd{\$1} به بعد بسط می‌یابد. اگر در میان دابل‌کوتیشن (\cmd{"\$*"}) قرار گیرد، کل پارامترها به یک رشته واحد تبدیل می‌شوند که با اولین کاراکتر متغیر \cmd{IFS} (معمولاً فاصله) از هم جدا شده‌اند. \\
+\addlinespace
+\cmd{\$\@} & به تمامی پارامترها از \cmd{\$1} به بعد بسط می‌یابد. اگر در میان دابل‌کوتیشن (\cmd{"\$@"}) قرار گیرد، هر پارامتر به عنوان یک واژه مجزا حفظ می‌شود؛ به‌گونه‌ای که مرز میان آرگومان‌ها (حتی آرگومان‌های حاوی فاصله) در خروجی باقی می‌ماند. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+اسکریپت زیر رفتار عملی این پارامترهای ویژه را به تصویر می‌کشد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# posit-params3: script to demonstrate $* and $@
+
+print_params () {
+    echo "\$1 = $1"
+    echo "\$2 = $2"
+    echo "\$3 = $3"
+    echo "\$4 = $4"
+}
+
+pass_params () {
+    echo -e "\n" '$* :';      print_params $*
+    echo -e "\n" '"$*" :';  print_params "$*"
+    echo -e "\n" '$@ :';      print_params $@
+    echo -e "\n" '"$@" :';  print_params "$@"
+}
+
+pass_params "word" "words with spaces"
+\end{lstlisting}
+\end{latin}
+
+در این برنامه، دو آرگومان مجزا شامل یک واژه ساده (\cmd{word}) و یک عبارت حاوی فاصله (\cmd{words with spaces}) را ایجاد کرده و به تابع \cmd{pass\_params} ارسال می‌کنیم. این تابع نیز ورودی‌ها را با استفاده از چهار الگوی ممکن (ترکیب \cmd{\$\*} و \cmd{\$\@} با کوتیشن و بدون آن) به تابع \cmd{print\_params} منتقل می‌کند. خروجی حاصل، تفاوت‌های ساختاری این الگوها را آشکار می‌سازد:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ posit-param3
+
+ $* :
+$1 = word
+$2 = words
+$3 = with
+$4 = spaces
+
+ "$*" :
+$1 = word words with spaces
+$2 =
+$3 =
+$4 =
+
+ $@ :
+$1 = word
+$2 = words
+$3 = with
+$4 = spaces
+
+ "$@" :
+$1 = word
+$2 = words with spaces
+$3 =
+$4 =
+\end{lstlisting}
+\end{latin}
+
+تحلیل نهایی آرگومان‌های ورودی نشان می‌دهد که در سناریوی مفروض، هر دو حالت \cmd{\$\*} و \cmd{\$\@} (در وضعیت بدون کوتیشن) خروجی را به چهار بخش مجزا می‌شکنند:
+
+\begin{latin}
+\begin{lstlisting}
+word words with spaces
+\end{lstlisting}
+\end{latin}
+
+در مقابل، عبارت \cmd{"\$*"} یک خروجی رشته‌ای واحد و ادغام‌یافته تولید می‌کند:
+
+\begin{latin}
+\begin{lstlisting}
+"word words with spaces"
+\end{lstlisting}
+\end{latin}
+
+اما ساختار \cmd{"\$@"} خروجی را دقیقاً در قالب دو بخش مجزا حفظ می‌کند که با منطق ورودی‌های اولیه ما انطباق کامل دارد:
+
+\begin{latin}
+\begin{lstlisting}
+"word" "words with spaces"
+\end{lstlisting}
+\end{latin}
+
+دستاورد فنی این بررسی آن است که علی‌رغم وجود چهار روش مختلف در پوسته برای فراخوانی فهرست پارامترهای موقعیتی، الگوی \cmd{"\$@"} در قریب به اتفاق موقعیت‌ها کارآمدترین انتخاب محسوب می‌شود؛ چرا که این ساختار «تمامیت» (\en{Integrity}) و مرزبندی هر پارامتر را به‌دقت حفظ می‌کند. برای تضمین پایداری و امنیت اسکریپت، همواره باید استفاده از این الگو را در اولویت قرار داد، مگر آنکه ضرورت فنی خاصی برای بهره‌گیری از سایر روش‌ها وجود داشته باشد.
+
+\section{پیاده‌سازی پردازش آرگومان‌ها در پروژه‌های عملی}
+
+پس از وقفه‌ای کوتاه، توسعه برنامه \cmd{sys\_info\_page} را که آخرین بار در فصل ۲۷ بررسی شد، از سر می‌گیریم. در این مرحله، قصد داریم قابلیت پذیرش گزینه‌های خط فرمان (\en{Command Line Options}) را به اسکریپت اضافه کنیم. این قابلیت‌ها شامل موارد زیر است:
+
+\begin{itemize}
+  \item \textbf{تعیین فایل خروجی:} امکان مشخص کردن نام فایل برای ذخیره‌ی نتایج با استفاده از گزینه \cmd{-f file} یا \cmd{--file file}.
+  \item \textbf{حالت تعاملی (\en{Interactive}):} دریافت نام فایل از کاربر و بررسی وجود قبلی آن. در صورت وجود فایل، پیش از بازنویسی (\en{Overwrite})، تأییدیه کاربر دریافت می‌شود. این حالت با \cmd{-i} یا \cmd{--interactive} فعال می‌شود.
+  \item \textbf{راهنمای کاربری:} نمایش پیام راهنما در صورت استفاده از گزینه \cmd{-h} یا \cmd{--help}.
+\end{itemize}
+
+ساختار کد زیر، منطق پردازش این گزینه‌ها را پیاده‌سازی می‌کند:
+
+\begin{latin}
+\begin{lstlisting}
+usage () {
+    echo "$PROGNAME: usage: $PROGNAME [-f file | -i]"
+    return
+}
+
+# process command line options
+
+interactive=
+filename=
+
+while [[ -n "$1" ]]; do
+    case "$1" in
+        -f | --file)               shift
+                                   filename="$1"
+                                   ;;
+        -i | --interactive)        interactive=1
+                                   ;;
+        -h | --help)               usage
+                                   exit
+                                   ;;
+        *)                         usage >&2
+                                   exit 1
+                                   ;;
+    esac
+    shift
+done
+\end{lstlisting}
+\end{latin}
+
+در گام نخست، تابعی تحت عنوان \cmd{usage} تعریف شده است که وظیفه‌ی نمایش دستورالعمل استفاده از برنامه را در هنگام بروز خطا یا درخواست کاربر بر عهده دارد.
+
+سپس، فرآیند پردازش گزینه‌ها آغاز می‌گردد. در این بخش، از یک حلقه \cmd{while} استفاده شده است که تا زمان وجود پارامتر در پارامتر موقعیتی \cmd{\$1} (شرط \cmd{[[ -n "\$1" ]]}) به پیمایش ادامه می‌دهد. ساختار \cmd{case} وظیفه‌ی تشخیص الگوهای ورودی را بر عهده دارد. نکته‌ی فنی حائز اهمیت، استفاده از دستور \cmd{shift} در انتهای حلقه است؛ این عمل باعث می‌شود در هر تکرار، تمامی پارامترها یک گام به جلو حرکت کنند تا در نهایت با اتمام آرگومان‌ها، حلقه خاتمه یابد. همچنین در گزینه \cmd{-f}، یک \cmd{shift} اضافی تعبیه شده تا مقدارِ پس از گزینه (نام فایل) بلافاصله خوانده و در متغیر \cmd{filename} ذخیره شود.
+
+درون بدنه حلقه، از ساختار شرطی \cmd{case} برای ارزیابی پارامتر موقعیتی جاری استفاده شده است تا انطباق آن با گزینه‌های مجاز بررسی شود. در صورت احراز تطبیق، عملیات متناظر اجرا می‌گردد؛ در غیر این صورت، چنانچه ورودی با هیچ‌یک از الگوهای تعریف‌شده سازگار نباشد، تابع راهنما فراخوانی شده و اسکریپت با وضعیت خروج (\en{Exit Status}) خاتمه می‌یابد.
+
+مدیریت گزینه \cmd{-f} (یا معادل آن \cmd{--file}) مکانیزم قابل‌توجهی دارد. به محض شناسایی این گزینه، یک دستور \cmd{shift} ثانویه اجرا می‌شود. این عمل باعث می‌گردد تا پارامتر موقعیتی \cmd{\$1} که پیش‌تر حاوی خودِ گزینه (مانند \cmd{-f}) بود، بلافاصله با مقدارِ بعدی موجود در خط فرمان (یعنی نام فایل مورد نظر) جایگزین شود. بدین ترتیب، اسکریپت می‌تواند مقدارِ آرگومانِ متصل به گزینه را استخراج و در متغیر مربوطه ذخیره کند.
+
+\subsection{دستور داخلی getopts}
+
+الگوی پیشین که برای تجزیه (\en{Parsing}) پارامترهای موقعیتی طراحی شد، راهکاری منعطف و کارآمد است، اما تنها روش موجود نیست. پوسته \en{Bash} از یک دستور داخلی (\en{Built-in}) به نام \cmd{getopts} بهره می‌برد که فرآیند پردازش گزینه‌ها را استانداردسازی می‌کند. توجه داشته باشید که این دستور نباید با ابزار خارجی \cmd{getopt} اشتباه گرفته شود.
+
+در هر بار فراخوانی \cmd{getopts} (که عموماً در یک حلقه تکرار انجام می‌پذیرد)، این دستور گزینه جاری را در یک متغیر مشخص قرار داده و متغیر محیطی \cmd{OPTIND} را برای اشاره به پارامتر موقعیتی بعدی به‌روزرسانی می‌کند. چنانچه گزینه‌ای مستلزم دریافت یک آرگومان باشد، آن مقدار به‌طور خودکار در متغیر \cmd{OPTARG} ذخیره می‌شود.
+
+نحو (\en{Syntax}) کلی دستور \cmd{getopts} به شرح زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+getopts optstring var [arg ...]
+\end{lstlisting}
+\end{latin}
+
+آرگومان \file{optstring} رشته‌ای است که حروف مجاز برای گزینه‌ها را تعیین می‌کند. شایان ذکر است که \cmd{getopts} به‌صورت بومی از گزینه‌های طولانی (\en{Long-format}) پشتیبانی نمی‌کند. علاوه بر این، درج نویسه \cmd{:} پس از نام هر گزینه، بیانگر آن است که آن گزینه نیاز به یک آرگومان ورودی دارد. در حالی که \cmd{getopts} صرفاً از گزینه‌های تک‌نویسه‌ای پشتیبانی می‌کند، اما قابلیت پردازش گزینه‌های زنجیره‌ای (مانند \cmd{ls -la}) را بدون نیاز به خط‌تیره‌های مجزا فراهم می‌سازد.
+
+اگر رشته \file{optstring} با نویسه \cmd{:} آغاز شود، \cmd{getopts} در حالت «بی‌صدا» (\en{Silent Mode}) عمل کرده و از نمایش پیام‌های خطای پیش‌فرض در مواجهه با گزینه‌های غیرمجاز یا فقدان آرگومان خودداری می‌کند.
+
+متغیر \file{var} در هر تکرار حلقه، حرف گزینهٔ جاری را به عنوان یک نام دریافت و در خود ذخیره می‌کند. \cmd{getopts} به‌طور پیش‌فرض پارامترهای موقعیتی را پردازش می‌کند، اما می‌تواند هر لیست آرگومان دیگری را که پس از نام متغیر ذکر شود نیز ارزیابی نماید. این دستور تا زمانی که آرگومانی برای پردازش در صف موجود باشد، وضعیت خروج (\en{Exit Status}) موفقیت‌آمیز بازمی‌گرداند.
+
+ممکن است در نگاه نخست، این ساختار پیچیده به نظر برسد، اما با مشاهده عملکرد آن در یک سناریوی واقعی، سادگی آن آشکار می‌شود. در ادامه، نسخه‌ای بازنویسی‌شده از اسکریپت قبلی را با بهره‌گیری از دستور \cmd{getopts} مشاهده می‌کنید:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# getopts-test: process command line options using getopts
+
+PROGNAME="$(basename "$0")"
+interactive=
+filename=
+
+usage () {
+    echo "$PROGNAME: usage: $PROGNAME [-f file | -i]"
+    return
+}
+
+while getopts :f:ih opt; do
+    case "$opt" in
+        f)  filename="$OPTARG" ;;
+        i)  interactive=1 ;;
+        h)  usage ;;
+        \?) echo "option '$OPTARG' invalid" ;;
+        :)  echo "option '$OPTARG' missing argument" ;;
+    esac
+done
+echo "interactive = '$interactive' filename = '$filename'"
+\end{lstlisting}
+\end{latin}
+
+در تحلیل دقیق‌تر این کد، پس از تعریف متغیرهای اولیه و تابع راهنما، به بخش اصلی یعنی حلقه \cmd{while} و دستور \cmd{getopts} می‌رسیم. رشته گزینه‌های ما (\file{optstring}) با یک \cmd{:} آغاز شده است تا پیام‌های خطای سیستمی غیرفعال شوند. پس از آن، حروف گزینه‌ها فهرست شده‌اند؛ از آنجا که گزینه \cmd{f} مستلزم دریافت یک آرگومان (نام فایل) است، بلافاصله پس از آن یک \cmd{:} قرار گرفته است. در نهایت، متغیری به نام \cmd{opt} برای ذخیره‌ی گزینه جاری تعیین شده است.
+
+درون بدنه حلقه، از ساختار \cmd{case} برای پردازش خروجی متغیر \cmd{opt} استفاده می‌کنیم. در اینجا دو الگوی ویژه در انتهای عبارت \cmd{case} حائز اهمیت هستند:
+
+الگوی \cmd{\textbackslash?} زمانی فراخوانی می‌شود که کاربری گزینه‌ای خارج از لیست مجاز وارد کند. توجه داشته باشید که نویسه علامت سؤال باید با یک بک‌اسلش (\cmd{\textbackslash}) گریز داده شود تا پوسته آن را به عنوان یک نویسه جانشین (\en{Wildcard}) تفسیر نکند.
+
+الگوی \cmd{:} نیز زمانی فعال می‌شود که گزینه‌ای (مانند \cmd{f}) بدون آرگومانِ الزامی خود رها شده باشد. در هر دوی این وضعیت‌های خطا، \cmd{getopts} حرف گزینه مورد نظر را در متغیر سیستمی \cmd{OPTARG} قرار می‌دهد تا بتوان گزارش دقیق‌تری به کاربر ارائه داد.
+
+بیایید عملکرد این نسخه نمایشی را در سناریوهای مختلف بررسی کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ getopts-test
+interactive = '' filename = ''
+[me@linuxbox ~]$ getopts-test -i
+interactive = '1' filename = ''
+[me@linuxbox ~]$ getopts-test -f foo.html
+interactive = '' filename = 'foo.html'
+[me@linuxbox ~]$ getopts-test -if foo.html
+interactive = '1' filename = 'foo.html'
+[me@linuxbox ~]$ getopts-test -i -f foo.html
+interactive = '1' filename = 'foo.html'
+[me@linuxbox ~]$ getopts-test -a
+option 'a' invalid
+interactive = '' filename = ''
+[me@linuxbox ~]$ getopts-test -f
+option 'f' missing argument
+interactive = '' filename = ''
+\end{lstlisting}
+\end{latin}
+
+در نهایت، پرسش این است که کدام رویکرد ارجحیت دارد: ترکیب \cmd{while / shift} یا استفاده از \cmd{getopts}؟ انتخاب میان این دو روش کاملاً به نیازمندی‌های پروژه بستگی دارد. رویکرد \cmd{while / shift} بالاترین سطح کنترل را در اختیار برنامه‌نویس قرار می‌دهد (به‌ویژه برای پیاده‌سازی گزینه‌های طولانی یا \en{Long-format} به‌صورت دستی). در مقابل، ابزار \cmd{getopts} علاوه بر کاهش حجم کدنویسی، به‌صورت بومی از نگارش زنجیره‌ای گزینه‌ها (ارائه چند گزینه تنها با یک خط تیره) پشتیبانی می‌کند که مطابق با استانداردهای رایج یونیکس است.
+
+\section{پیاده‌سازی حالت تعاملی (Interactive Mode)}
+
+با تکیه بر منطق پارامترهای موقعیتی که پیش‌تر تدوین شد، اکنون به پیاده‌سازی مکانیزم تعاملی برنامه می‌پردازیم:
+
+\begin{latin}
+\begin{lstlisting}
+# interactive mode
+
+if [[ -n "$interactive" ]]; then
+    while true; do
+        read -r -p "Enter name of output file: " filename
+        if [[ -e "$filename" ]]; then
+            read -r -p "'$filename' exists. Overwrite? [y/n/q] > "
+            case "$REPLY" in
+                Y|y) break
+                     ;;
+                Q|q) echo "Program terminated."
+                     exit
+                     ;;
+                *) continue
+                     ;;
+            esac
+        elif [[ -z "$filename" ]]; then
+            continue
+        else
+            break
+        fi
+    done
+fi
+\end{lstlisting}
+\end{latin}
+
+در این بخش از کد، چنانچه متغیر \cmd{interactive} مقداردهی شده باشد، یک حلقه تکرار بی‌نهایت (\cmd{while true}) آغاز می‌گردد. وظیفه این حلقه، دریافت نام فایل خروجی و ارزیابی وضعیت وجود آن در سیستم فایل است. در صورتی که فایلی با همان نام از پیش موجود باشد، اسکریپت با توقف در این مرحله از کاربر می‌خواهد میان بازنویسی (\en{Overwrite})، انتخاب نامی دیگر یا خروج کامل از برنامه، یک گزینه را برگزیند.
+
+اگر کاربر موافقت خود را برای بازنویسی اعلام کند، دستور \cmd{break} اجرا شده و فرآیند تکرار خاتمه می‌یابد تا برنامه به مراحل بعدی هدایت شود. شایان ذکر است که ساختار \cmd{case} به‌گونه‌ای طراحی شده که صرفاً انتخاب‌های صریح جهت بازنویسی یا خروج را پردازش کند؛ لذا هرگونه ورودی غیرمرتبط دیگر منجر به اجرای دستور \cmd{continue} شده و کاربر را مجدداً به ابتدای پرسش بازمی‌گرداند تا نام فایل معتبری ارائه دهد.
+
+\section{هدایت خروجی به فایل}
+
+به‌منظور پیاده‌سازی قابلیت تعیین فایل خروجی، در گام نخست لازم است منطق تولید کدهای \en{HTML} را در قالب یک تابع پوسته (\en{Shell Function}) بازتعریف کنیم. این رویکرد ماژولار، انعطاف‌پذیری لازم برای مدیریت مقصدهای مختلف خروجی را فراهم می‌سازد:
+
+\begin{latin}
+\begin{lstlisting}
+write_html_page () {
+    cat << _EOF_
+<html>
+    <head>
+        <title>$TITLE</title>
+    </head>
+    <body>
+        <h1>$TITLE</h1>
+        <p>$TIMESTAMP</p>
+        $(report_uptime)
+        $(report_disk_space)
+        $(report_home_space)
+    </body>
+</html>
+_EOF_
+    return
+}
+
+# output html page
+
+if [[ -n "$filename" ]]; then
+    if touch "$filename" && [[ -f "$filename" ]]; then
+        write_html_page > "$filename"
+    else
+        echo "$PROGNAME: Cannot write file '$filename'" >&2
+        exit 1
+    fi
+else
+    write_html_page
+fi
+\end{lstlisting}
+\end{latin}
+
+منطق مدیریت گزینه \cmd{-f} در انتهای قطعه‌کد فوق پیاده‌سازی شده است. در این بخش، ابتدا وجود نام فایل بررسی شده و سپس قابلیت نوشتن (\en{Writability}) در آن مورد ارزیابی قرار می‌گیرد. استفاده از دستور \cmd{touch} پیش از بررسی نوع فایل، یک تکنیک هوشمندانه برای پوشش دو سناریوی خطا است: نخست، نامعتبر بودن مسیر فایل (که منجر به شکست دستور \cmd{touch} می‌شود) و دوم، حصول اطمینان از اینکه فایل موجود حتماً از نوع «فایل معمولی» (\en{Regular File}) است و نه یک دایرکتوری یا فایل سیستمی خاص.
+
+همان‌طور که ملاحظه می‌شود، تابع \cmd{write\_html\_page} وظیفه تولید محتوا را بر عهده دارد. خروجی این تابع بسته به وضعیت متغیر \cmd{filename}، یا به خروجی استاندارد (\en{stdout}) ارسال می‌گردد و یا به سمت فایل تعیین‌شده هدایت (\en{Redirection}) می‌شود. تبدیل این فرآیند به یک تابع، از تکرار بیهوده کد (\en{Code Duplication}) جلوگیری کرده و نگهداری اسکریپت را تسهیل می‌کند.
+
+\section{جمع‌بندی}
+
+با بهره‌گیری از پارامترهای موقعیتی (\en{Positional Parameters})، اکنون توانمندی لازم برای نگارش اسکریپت‌های کاربردی و حرفه‌ای فراهم شده است. این قابلیت در وظایف ساده و تکرارپذیر، امکان طراحی توابع کارآمدی را فراهم می‌سازد که می‌توان آن‌ها را جهت دسترسی سریع در فایل پیکربندی \file{.bashrc} گنجاند.
+
+برنامه \cmd{sys\_info\_page} اکنون از نظر ساختار فنی و پیچیدگی عملیاتی به بلوغ رسیده است. در ادامه، کد منبع (\en{Source Code}) کامل این برنامه را مشاهده می‌کنید که تمامی بهبودهای اخیر در آن لحاظ شده است:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# sys_info_page: program to output a system information page
+
+PROGNAME="$(basename "$0")"
+TITLE="System Information Report For $HOSTNAME"
+CURRENT_TIME="$(date +"%x %r %Z")"
+TIMESTAMP="Generated $CURRENT_TIME, by $USER"
+
+report_uptime () {
+    cat << _EOF_
+    <h2>System Uptime</h2>
+    <pre>$(uptime)</pre>
+_EOF_
+    return
+}
+
+report_disk_space () {
+    cat << _EOF_
+    <h2>Disk Space Utilization</h2>
+    <pre>$(df -h)</pre>
+_EOF_
+    return
+}
+
+report_home_space () {
+    if [[ "$(id -u)" -eq 0 ]]; then
+        cat << _EOF_
+    <h2>Home Space Utilization (All Users)</h2>
+    <pre>$(du -sh /home/*)</pre>
+_EOF_
+    else
+        cat << _EOF_
+    <h2>Home Space Utilization ($USER)</h2>
+    <pre>$(du -sh "$HOME")</pre>
+_EOF_
+    fi
+    return
+}
+
+usage () {
+    echo "$PROGNAME: usage: $PROGNAME [-f file | -i]"
+    return
+}
+
+write_html_page () {
+    cat << _EOF_
+<html>
+    <head>
+        <title>$TITLE</title>
+    </head>
+    <body>
+        <h1>$TITLE</h1>
+        <p>$TIMESTAMP</p>
+        $(report_uptime)
+        $(report_disk_space)
+        $(report_home_space)
+    </body>
+</html>
+_EOF_
+    return
+}
+
+# process command line options
+
+interactive=
+filename=
+
+while [[ -n "$1" ]]; do
+    case "$1" in
+        -f | --file)          shift
+                              filename="$1"
+                              ;;
+        -i | --interactive)   interactive=1
+                              ;;
+        -h | --help)          usage
+                              exit
+                              ;;
+        *)                    usage >&2
+                              exit 1
+                              ;;
+    esac
+    shift
+done
+
+# interactive mode
+
+if [[ -n "$interactive" ]]; then
+    while true; do
+        read -r -p "Enter name of output file: " filename
+        if [[ -e "$filename" ]]; then
+            read -r -p "'$filename' exists. Overwrite? [y/n/q] > "
+            case "$REPLY" in
+                Y|y) break
+                     ;;
+                Q|q) echo "Program terminated."
+                     exit
+                     ;;
+                *) continue
+                     ;;
+            esac
+        elif [[ -z "$filename" ]]; then
+            continue
+        else
+            break
+        fi
+    done
+fi
+
+# output html page
+
+if [[ -n "$filename" ]]; then
+    if touch "$filename" && [[ -f "$filename" ]]; then
+        write_html_page > "$filename"
+    else
+        echo "$PROGNAME: Cannot write file '$filename'" >&2
+        exit 1
+    fi
+else
+    write_html_page
+fi
+\end{lstlisting}
+\end{latin}
+
+توسعه این اسکریپت در همین‌جا متوقف نمی‌شود؛ هنوز جنبه‌های مختلفی برای بهینه‌سازی و ارتقای امنیت کد وجود دارد که در گام‌های آتی بررسی خواهند شد.
+
+\section{منابع مطالعه تکمیلی}
+
+راهنمای مرجع \en{Bash} مقاله‌ای پیرامون پارامترهای ویژه (\en{special parameters})، از جمله \cmd{\$\*} و \cmd{\$\@} دارد:
+
+\begin{latin}
+\url{http://www.gnu.org/software/bash/manual/bashref.html#Special-Parameters}
+\end{latin}

@@ -1,0 +1,290 @@
+\chapter{کنترل جریان با شاخه‌بندی case}
+
+در این فصل، به بررسی تکمیلی مکانیزم‌های کنترل جریان می‌پردازیم. در فصل ۲۸، منوهای ساده‌ای طراحی کردیم و منطق عملیاتی آن‌ها را بر اساس انتخاب کاربر پیاده‌سازی نمودیم. برای تحقق این هدف، از مجموعه‌ای از دستورات شرطی \cmd{if} بهره گرفتیم تا گزینه‌ی انتخاب‌شده را شناسایی کنیم. این نوع ساختار منطقی در برنامه‌نویسی چنان پرتکرار است که اکثر زبان‌های برنامه‌نویسی (از جمله \en{Shell}) مکانیزم اختصاصی و بهینه‌ای را برای تصمیم‌گیری‌های چندگزینه‌ای در نظر گرفته‌اند.
+
+\section{ساختار دستور case}
+
+در \en{Bash}، دستور مرکب چندگزینه‌ای با نام \cmd{case} شناخته می‌شود که نحو (\en{Syntax}) آن به شرح زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+case word in
+    [pattern [| pattern]...) commands ;;]...
+esac
+\end{lstlisting}
+\end{latin}
+
+اگر به برنامه \cmd{read-menu} در فصل ۲۸ رجوع کنیم، منطق زیر را برای پردازش انتخاب‌های کاربر مشاهده می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# read-menu: a menu driven system information program
+
+clear
+echo "
+Please Select:
+
+1. Display System Information
+2. Display Disk Space
+3. Display Home Space Utilization
+0. Quit
+"
+read -r -p "Enter selection [0-3] > "
+
+if [[ "$REPLY" =~ ^[0-3]$ ]]; then
+    if [[ "$REPLY" == 0 ]]; then
+        echo "Program terminated."
+        exit
+    fi
+    if [[ "$REPLY" == 1 ]]; then
+        echo "Hostname: $HOSTNAME"
+        uptime
+        exit
+    fi
+    if [[ "$REPLY" == 2 ]]; then
+        df -h
+        exit
+    fi
+    if [[ "$REPLY" == 3 ]]; then
+        if [[ "$(id -u)" -eq 0 ]]; then
+            echo "Home Space Utilization (All Users)"
+            du -sh /home/*
+        else
+            echo "Home Space Utilization ($USER)"
+            du -sh "$HOME"
+        fi
+        exit
+    fi
+else
+    echo "Invalid entry." >&2
+    exit 1
+fi
+\end{lstlisting}
+\end{latin}
+
+با بهره‌گیری از دستور \cmd{case}، می‌توانیم منطق فوق را با ساختاری بسیار منسجم‌تر و خواناتر بازنویسی کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# case-menu: a menu driven system information program
+
+clear
+echo "
+Please Select:
+
+1. Display System Information
+2. Display Disk Space
+3. Display Home Space Utilization
+0. Quit
+"
+read -r -p "Enter selection [0-3] > "
+
+case "$REPLY" in
+    0)  echo "Program terminated."
+        exit
+        ;;
+    1)  echo "Hostname: $HOSTNAME"
+        uptime
+        ;;
+    2)  df -h
+        ;;
+    3)  if [[ "$(id -u)" -eq 0 ]]; then
+            echo "Home Space Utilization (All Users)"
+            du -sh /home/*
+        else
+            echo "Home Space Utilization ($USER)"
+            du -sh "$HOME"
+        fi
+        ;;
+    *)  echo "Invalid entry" >&2
+        exit 1
+        ;;
+esac
+\end{lstlisting}
+\end{latin}
+
+در این ساختار، دستور \cmd{case} مقدار عبارت \file{word} (که در اینجا محتوای متغیر \cmd{REPLY} است) را با الگوهای (\en{Patterns}) تعریف‌شده مقایسه می‌کند. به محض یافتن اولین تطابق (\en{Match})، مجموعه‌ی دستورات متناظر با آن الگو اجرا شده و فرآیند مقایسه خاتمه می‌یابد؛ بدین معنا که پوسته از جستجو برای تطابق‌های بعدی صرف‌نظر می‌کند. نویسه‌ی \cmd{*} به عنوان یک الگوی عمومی عمل کرده و در صورتی که ورودی با هیچ‌یک از موارد پیشین مطابقت نداشته باشد، دستورات بخش نهایی را اجرا می‌کند.
+
+\section{انطباق الگوها}
+
+الگوهایی که در ساختار \cmd{case} مورد استفاده قرار می‌گیرند، از همان قواعد منطقی بسط مسیر (\en{Pathname Expansion}) یا اصطلاحاً \en{Globbing} پیروی می‌کنند. هر الگو در این ساختار با کاراکتر پرانتز بسته \cmd{)} خاتمه می‌یابد. جدول زیر نمونه‌هایی از الگوهای معتبر و پرکاربرد را نمایش می‌دهد:
+
+\begin{table}[htbp]
+\centering
+\caption{نمونه الگوهای دستور \cmd{case}}
+\label{tab:case-patterns}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{الگو} & \textbf{شرح عملکرد} \\
+\midrule
+\cmd{a)} & انطباق دقیق، در صورتی که مقدار مورد بررسی برابر با کاراکتر «\en{a}» باشد. \\
+\addlinespace
+\cmd{[[:alpha:]])} & انطباق، در صورتی که ورودی تنها شامل یک کاراکتر الفبایی (حرف) باشد. \\
+\addlinespace
+\cmd{???)} & انطباق، در صورتی که ورودی دقیقاً از سه کاراکتر تشکیل شده باشد. \\
+\addlinespace
+\cmd{*.txt)} & انطباق با هر رشته‌ای که به پسوند \file{.txt} ختم شود. \\
+\addlinespace
+\cmd{*)} & الگوی عمومی که با هر مقداری تطبیق می‌یابد. توصیه می‌شود این الگو در انتهای ساختار \cmd{case} قرار گیرد تا ورودی‌های نامعتبر یا پیش‌بینی‌نشده را نیز مدیریت کند. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+نمونه‌ای از پیاده‌سازی این الگوها در یک اسکریپت:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+read -r -p "enter word > "
+
+case "$REPLY" in
+    [[:alpha:]])    echo "is a single alphabetic character." ;;
+    [ABC][0-9])     echo "is A, B, or C followed by a digit." ;;
+    ???)            echo "is three characters long." ;;
+    *.txt)          echo "is a word ending in '.txt'" ;;
+    *)              echo "is something else." ;;
+esac
+\end{lstlisting}
+\end{latin}
+
+علاوه بر این، می‌توان چندین الگو را با استفاده از کاراکتر خط عمودی (\cmd{|}) به عنوان جداکننده ترکیب کرد. این کارکرد، منطق شرطی «یا» (\en{OR}) را ایجاد می‌کند و به‌ویژه در مدیریت حساسیت به حروف بزرگ و کوچک (\en{Case Sensitivity}) بسیار کارآمد است. به نسخه‌ی اصلاح‌شده‌ی برنامه \cmd{case-menu} توجه کنید:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# case-menu: a menu driven system information program
+
+clear
+echo "
+Please Select:
+
+A. Display System Information
+B. Display Disk Space
+C. Display Home Space Utilization
+Q. Quit
+"
+read -r -p "Enter selection [A, B, C or Q] > "
+case "$REPLY" in
+    q|Q) echo "Program terminated."
+         exit
+         ;;
+    a|A) echo "Hostname: $HOSTNAME"
+         uptime
+         ;;
+    b|B) df -h
+         ;;
+    c|C) if [[ "$(id -u)" -eq 0 ]]; then
+             echo "Home Space Utilization (All Users)"
+             du -sh /home/*
+         else
+             echo "Home Space Utilization ($USER)"
+             du -sh "$HOME"
+         fi
+         ;;
+    *)   echo "Invalid entry" >&2
+         exit 1
+         ;;
+esac
+\end{lstlisting}
+\end{latin}
+
+در این ویرایش، از حروف الفبا به‌جای اعداد برای گزینه‌های منو استفاده شده است. ملاحظه می‌کنید که چگونه ترکیب الگوها اجازه می‌دهد تا اسکریپت در برابر وارد کردن حروف به‌صورت کوچک یا بزرگ به‌طور یکسان و صحیح واکنش نشان دهد.
+
+\section{اجرای چندگانه عملیات و توالی تطبیق}
+
+در نسخه‌های \en{Bash} پیش از ۴.۰، ساختار \cmd{case} تنها اجازه اجرای یک بلوک عملیاتی را پس از تطبیق موفقیت‌آمیز صادر می‌کرد. به محض یافتن اولین الگو، دستورات مربوطه اجرا و کل ساختار \cmd{case} خاتمه می‌یافت. اسکریپت زیر را که برای تحلیل ویژگی‌های یک کاراکتر طراحی شده است، در نظر بگیرید:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# case4-1: test a character
+
+read -r -n 1 -p "Type a character > "
+echo
+case "$REPLY" in
+    [[:upper:]])    echo "'$REPLY' is upper case." ;;
+    [[:lower:]])    echo "'$REPLY' is lower case." ;;
+    [[:alpha:]])    echo "'$REPLY' is alphabetic." ;;
+    [[:digit:]])    echo "'$REPLY' is a digit." ;;
+    [[:graph:]])    echo "'$REPLY' is a visible character." ;;
+    [[:punct:]])    echo "'$REPLY' is a punctuation symbol." ;;
+    [[:space:]])    echo "'$REPLY' is a whitespace character." ;;
+    [[:xdigit:]])   echo "'$REPLY' is a hexadecimal digit." ;;
+esac
+\end{lstlisting}
+\end{latin}
+
+اجرای این اسکریپت خروجی زیر را به دنبال دارد:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ case4-1
+Type a character > a
+'a' is lower case.
+\end{lstlisting}
+\end{latin}
+
+اگرچه این رفتار در بسیاری از سناریوها مطلوب است، اما در مواردی که یک ورودی با چندین کلاس نویسه‌ای \en{POSIX} مطابقت دارد، محدودکننده خواهد بود. برای مثال، کاراکتر \cmd{"a"} همزمان یک حرف کوچک، یک کاراکتر الفبایی و یک رقم در سیستم شانزده‌تایی (\en{Hexadecimal}) محسوب می‌شود. در نسخه‌های قدیمی \en{Bash}، امکان تطبیق همزمان با چند شرط وجود نداشت.
+
+در نسخه‌های مدرن \en{Bash} (۴.۰ به بالا)، با معرفی عملگر \cmd{;;\&} این محدودیت مرتفع شده است. این نحو جدید به پوسته فرمان می‌دهد که پس از اجرای دستورات مربوط به یک الگو، فرآیند را خاتمه نداده و جستجو برای تطبیق با الگوهای بعدی را ادامه دهد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# case4-2: test a character
+
+read -r -n 1 -p "Type a character > "
+echo
+case "$REPLY" in
+    [[:upper:]])    echo "'$REPLY' is upper case." ;;&
+    [[:lower:]])    echo "'$REPLY' is lower case." ;;&
+    [[:alpha:]])    echo "'$REPLY' is alphabetic." ;;&
+    [[:digit:]])    echo "'$REPLY' is a digit." ;;&
+    [[:graph:]])    echo "'$REPLY' is a visible character." ;;&
+    [[:punct:]])    echo "'$REPLY' is a punctuation symbol." ;;&
+    [[:space:]])    echo "'$REPLY' is a whitespace character." ;;&
+    [[:xdigit:]])   echo "'$REPLY' is a hexadecimal digit." ;;&
+esac
+\end{lstlisting}
+\end{latin}
+
+خروجی اسکریپت جدید به این صورت تغییر می‌کند:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ case4-2
+Type a character > a
+'a' is lower case.
+'a' is alphabetic.
+'a' is a visible character.
+'a' is a hexadecimal digit.
+\end{lstlisting}
+\end{latin}
+
+در واقع، استفاده از \cmd{;;\&} در انتهای هر بخش، منطق «توقف پس از اولین تطبیق» را به «ارزیابی تمامی الگوهای بعدی» تغییر می‌دهد که برای طبقه‌بندی دقیق داده‌ها بسیار کارآمد است.
+
+\section{جمع‌بندی}
+
+ساختار \cmd{case} ابزاری کارآمد در جعبه‌ابزار برنامه‌نویسی پوسته محسوب می‌شود که خوانایی و مدیریت کدهای چندگزینه‌ای را به‌شکل چشم‌گیری بهبود می‌بخشد. همان‌طور که در فصل بعد خواهیم دید، این دستور برای حل انواع خاصی از مسائل، ابزاری ایده‌آل است.
+
+\section{منابع مطالعه تکمیلی}
+
+بخش ساختارهای شرطی (\en{Conditional Constructs}) در راهنمای مرجع \en{Bash}، دستور \cmd{case} را با جزئیات کامل شرح می‌دهد:
+
+\begin{latin}
+\url{http://tiswww.case.edu/php/chet/bash/bashref.html#SEC21}
+\end{latin}
+
+راهنمای پیشرفته اسکریپت‌نویسی \en{Bash} مثال‌های بیشتری از کاربردهای دستور \cmd{case} ارائه می‌دهد:
+
+\begin{latin}
+\url{http://tldp.org/LDP/abs/html/testbranch.html}
+\end{latin}

@@ -1,0 +1,420 @@
+\chapter{کنترل جریان با ساختارهای تکرار while و until}
+
+در فصل گذشته، یک برنامه‌ی منو-محور (\en{Menu-driven}) جهت نمایش وضعیت‌های گوناگون سیستم طراحی کردیم. اگرچه آن برنامه به‌درستی عمل می‌کند، اما از منظر تعامل با کاربر (\en{Usability}) با چالش‌های جدی روبروست؛ اسکریپت تنها پس از یک انتخاب خاتمه می‌یابد و بدتر آنکه در صورت وارد کردن ورودی نامعتبر، بدون ارائه فرصت مجدد به کاربر، با خطا متوقف می‌شود. رویکرد بهینه آن است که برنامه را به‌گونه‌ای بازنویسی کنیم که نمایش منو و دریافت ورودی را تا زمانی که کاربر صراحتاً دستور خروج را صادر نکرده است، به‌صورت مداوم تکرار کند.
+
+در این فصل، به بررسی مفهوم بنیادین «حلقه» (\en{Looping}) در برنامه‌نویسی می‌پردازیم که تکرار بخش‌های خاصی از کد را میسر می‌سازد. مفسر پوسته سه دستور مرکب (\en{Compound Commands}) برای ایجاد حلقه‌ها در اختیار ما قرار می‌دهد؛ در این بخش به بررسی دو مورد از آن‌ها پرداخته و مورد سوم را در فصل آتی بررسی خواهیم کرد.
+
+\section{مفهوم تکرار}
+
+زیست روزمره‌ی ما سرشار از فعالیت‌های تکرارپذیر است. اموری نظیر رفتنِ هرروزه به محل کار، پیاده‌روی با حیوانات خانگی یا خرد کردن سبزیجات، همگی مستلزم تکرار توالی خاصی از گام‌ها هستند. برای مثال، اگر بخواهیم فرآیند برش زدن یک هویج را در قالب «شبه‌کد» (\en{Pseudocode}) تبیین کنیم، به الگوی زیر می‌رسیم:
+
+\begin{enumerate}
+  \item تخته‌ی برش را آماده کن.
+  \item چاقو را بردار.
+  \item هویج را روی تخته قرار بده.
+  \item چاقو را بالا بیاور.
+  \item هویج را کمی به جلو ببر.
+  \item هویج را برش بزن.
+  \item چنانچه هویج به‌طور کامل خرد شده است، عملیات را پایان بده؛ در غیر این صورت، به مرحله‌ی ۴ بازگرد.
+\end{enumerate}
+
+مراحل ۴ تا ۷ یک «حلقه» را شکل می‌دهند. عملیات محصور در این حلقه تا زمانی که شرطِ «خرد شدن کامل هویج» محقق نشود، تکرار خواهند شد.
+
+\section{ساختار تکرار while}
+
+مفسر \en{Bash} قادر است منطق تکرار را به شکلی نظام‌مند پیاده‌سازی کند. برای مثال، جهت نمایش متوالی اعداد ۱ تا ۵، می‌توان اسکریپتی را به صورت زیر تدوین کرد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# while-count: display a series of numbers
+
+count=1
+
+while [[ "$count" -le 5 ]]; do
+    echo "$count"
+    count=$((count + 1))
+done
+echo "Finished."
+\end{lstlisting}
+\end{latin}
+
+پس از اجرا، خروجی به شرح زیر خواهد بود:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ while-count
+1
+2
+3
+4
+5
+Finished.
+\end{lstlisting}
+\end{latin}
+
+نحو (\en{Syntax}) دستور \cmd{while} به صورت زیر تعریف می‌شود:
+
+\begin{latin}
+\begin{lstlisting}
+while commands; do commands; done
+\end{lstlisting}
+\end{latin}
+
+عملکرد \cmd{while} مشابه ساختار \cmd{if} است؛ بدین معنا که وضعیت خروج (\en{Exit Status}) فهرستی از دستورات را بررسی می‌کند. تا زمانی که وضعیت خروج برابر با صفر (موفقیت‌آمیز) باشد، بدنه‌ی حلقه اجرا می‌گردد. در اسکریپت فوق، ابتدا متغیر \cmd{count} با مقدار \cmd{1} مقداردهی شده است. دستور \cmd{while} در هر تکرار، وضعیت خروج دستور مرکب \cmd{[[ ]]} را ارزیابی می‌کند. در پایان هر دور اجرای حلقه، مقدار متغیر یک واحد افزایش یافته و شرط مجدداً سنجیده می‌شود. پس از تکرار پنجم، زمانی که مقدار \cmd{count} به \cmd{6} می‌رسد، وضعیت خروج دیگر صفر نخواهد بود؛ در نتیجه حلقه شکسته شده و کنترل برنامه به دستور پس از کلمه‌ی کلیدی \cmd{done} منتقل می‌گردد.
+
+اکنون می‌توانیم از حلقه‌ی \cmd{while} برای بهینه‌سازی و ارتقای سطح تعامل برنامه \cmd{read-menu} در فصل گذشته بهره ببریم:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# while-menu: a menu driven system information program
+
+DELAY=3 # Number of seconds to display results
+
+while [[ "$REPLY" != 0 ]]; do
+    clear
+    cat << _EOF_
+        Please Select:
+
+        1. Display System Information
+        2. Display Disk Space
+        3. Display Home Space Utilization
+        0. Quit
+_EOF_
+    read -r -p "Enter selection [0-3] > "
+
+    if [[ "$REPLY" =~ ^[0-3]$ ]]; then
+        if [[ $REPLY == 1 ]]; then
+            echo "Hostname: $HOSTNAME"
+            uptime
+            sleep "$DELAY"
+        fi
+        if [[ "$REPLY" == 2 ]]; then
+            df -h
+            sleep "$DELAY"
+        fi
+        if [[ "$REPLY" == 3 ]]; then
+            if [[ "$(id -u)" -eq 0 ]]; then
+                echo "Home Space Utilization (All Users)"
+                du -sh /home/*
+            else
+                echo "Home Space Utilization ($USER)"
+                du -sh "$HOME"
+            fi
+            sleep "$DELAY"
+        fi
+    else
+        echo "Invalid entry."
+        sleep "$DELAY"
+    fi
+done
+
+echo "Program terminated."
+\end{lstlisting}
+\end{latin}
+
+با محصور کردن منطق منو در یک حلقه‌ی \cmd{while}، برنامه این توانایی را می‌یابد که پس از هر عملیات، منو را مجدداً به کاربر نمایش دهد. این چرخه تا زمانی که مقدار متغیر \cmd{REPLY} مخالف \cmd{0} باشد، استمرار می‌یابد. استفاده از دستور \cmd{sleep} در انتهای هر بخش، وقفه‌ای کوتاه ایجاد می‌کند تا کاربر فرصت کافی برای مطالعه‌ی نتایج خروجی داشته باشد؛ سپس با دستور \cmd{clear} صفحه پاک‌سازی شده و منو برای انتخاب بعدی آماده می‌شود. با ورود عدد \cmd{0} توسط کاربر، شرط حلقه نقض شده و اسکریپت پس از خروج از حلقه، پایان کار را اعلام می‌کند.
+
+\section{دستورات کنترلی break و continue}
+
+مفسر \en{Bash} دو دستور داخلی جهت مدیریت دقیق‌تر جریان اجرا در داخل حلقه‌ها ارائه می‌کند. دستور \cmd{break} بلافاصله اجرای حلقه را متوقف کرده و کنترل برنامه را به نخستین دستور پس از بلوک حلقه منتقل می‌کند. در مقابل، دستور \cmd{continue} بخش باقی‌مانده از بدنه‌ی حلقه در تکرار فعلی را نادیده گرفته و برنامه را مستقیماً به ابتدای تکرار بعدی (سنجش مجدد شرط) هدایت می‌کند.
+
+در ادامه، نسخه‌ی بازنویسی‌شده‌ی برنامه \cmd{while-menu} را مشاهده می‌کنید که از هر دو دستور بهره می‌برد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# while-menu2: a menu driven system information program
+
+DELAY=3 # Number of seconds to display results
+
+while true; do
+    clear
+    cat << _EOF_
+         Please Select:
+
+         1. Display System Information
+         2. Display Disk Space
+         3. Display Home Space Utilization
+         0. Quit
+_EOF_
+    read -p "Enter selection [0-3] > "
+
+    if [[ "$REPLY" =~ ^[0-3]$ ]]; then
+        if [[ "$REPLY" == 1 ]]; then
+            echo "Hostname: $HOSTNAME"
+            uptime
+            sleep "$DELAY"
+            continue
+        fi
+        if [[ "$REPLY" == 2 ]]; then
+            df -h
+            sleep "$DELAY"
+            continue
+        fi
+        if [[ "$REPLY" == 3 ]]; then
+            if [[ "$(id -u)" -eq 0 ]]; then
+                echo "Home Space Utilization (All Users)"
+                du -sh /home/*
+            else
+                echo "Home Space Utilization ($USER)"
+                du -sh "$HOME"
+            fi
+            sleep "$DELAY"
+            continue
+        fi
+        if [[ "$REPLY" == 0 ]]; then
+            break
+        fi
+    else
+        echo "Invalid entry."
+        sleep "$DELAY"
+    fi
+done
+echo "Program terminated."
+\end{lstlisting}
+\end{latin}
+
+در این نسخه از اسکریپت، از یک حلقه بی‌نهایت (\en{Infinite Loop}) استفاده شده است. این کار با به‌کارگیری دستور \cmd{true} در بخش شرطِ \cmd{while} محقق می‌شود؛ چرا که \cmd{true} همواره وضعیت خروج صفر (موفقیت‌آمیز) را برمی‌گرداند. این الگو در اسکریپت‌نویسی لینوکس بسیار متداول است، اما مسئولیت خروج به‌موقع از حلقه را بر عهده‌ی برنامه‌نویس می‌گذارد. در اینجا، دستور \cmd{break} وظیفه‌ی خروج از حلقه را هنگام انتخاب گزینه‌ی \en{"0"} بر عهده دارد.
+
+همچنین، استفاده از دستور \cmd{continue} در انتهای هر بلوک انتخاب، بهینگی اسکریپت را افزایش می‌دهد. با فراخوانی \cmd{continue} پس از اتمام هر عملیات، اسکریپت از بررسی سایر شروط غیرضروری در آن دورِ تکرار اجتناب کرده و بلافاصله به ابتدای حلقه بازمی‌گردد تا منو را دوباره نمایش دهد. برای مثال، اگر گزینه‌ی \cmd{1} انتخاب شود، دیگر نیازی به ارزیابی شروط مربوط به گزینه‌های \cmd{2} یا \cmd{3} نخواهد بود.
+
+\section{دستور داخلی select برای ایجاد منوهای تعاملی}
+
+اکنون زمان مناسبی است تا به بررسی دستور داخلی \cmd{select} در پوسته بپردازیم که به‌طور اختصاصی برای طراحی منوهای مبتنی بر حلقه (\en{looping menus}) در نظر گرفته شده است. ساختار نحوی این دستور به شرح زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+select var in [string... ;] do commands; done
+\end{lstlisting}
+\end{latin}
+
+در این الگو، \file{var} نشان‌دهنده نام متغیری است که انتخاب کاربر را ذخیره می‌کند و \file{string} شامل عناوین گزینه‌های منو است.
+
+هنگام اجرای \cmd{select}، ابتدا رشته یا رشته‌های تعریف‌شده در قالب یک فهرست شماره‌گذاری‌شده نمایش داده می‌شوند. سپس محتویات متغیر محیطی \cmd{PS3} (اعلان سطح سوم (\en{Prompt String 3})) به عنوان پیامی برای دریافت ورودی کاربر ظاهر می‌گردد. پس از آنکه کاربر گزینه‌ای را انتخاب کرد، مقدار عددی ورودی او در متغیر سیستمی \cmd{REPLY} ذخیره شده (مشابه عملکرد دستور \cmd{read}) و متنِ متناظر با آن انتخاب در متغیر \file{var} قرار می‌گیرد. با مقداردهی به این متغیرها، بلوک دستورات (\file{commands}) اجرا شده و پس از اتمام، اعلان انتخاب مجدداً برای کاربر نمایش داده می‌شود تا چرخه ادامه یابد.
+
+عملکرد این دستور ممکن است در ابتدا کمی مبهم به نظر برسد، اما با بررسی اسکریپت زیر می‌توان منطق اجرایی آن را به‌وضوح درک کرد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# select-demo: select builtin demo
+
+PS3="
+Your choice: "
+
+select my_choice in First Second Third Fourth Quit; do
+    echo "REPLY= $REPLY  my_choice= $my_choice"
+    [[ "$my_choice" == "Quit" ]] && break
+done
+\end{lstlisting}
+\end{latin}
+
+در گام نخست، محتوای متغیر محیطی \cmd{PS3} (رشته‌ی اعلان سطح سوم) را با عبارت دلخواه تنظیم می‌کنیم. سپس دستور \cmd{select} فراخوانی می‌شود. در این مثال، پنج گزینه تعریف شده است؛ اگرچه در اینجا از واژگان تک‌کلمه‌ای استفاده کرده‌ایم، اما می‌توان هر متن محصور در کوتیشن را نیز به‌کار برد. در بدنه دستورات، صرفاً مقادیر تخصیص‌یافته توسط \cmd{select} را با دستور \cmd{echo} چاپ می‌کنیم. همچنین متغیر \cmd{my\_choice} را پایش می‌کنیم تا در صورت انتخاب گزینه‌ی «\en{Quit}»، با دستور \cmd{break} از حلقه خارج شویم.
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ select-demo
+1) First
+2) Second
+3) Third
+4) Fourth
+5) Quit
+Your choice:
+\end{lstlisting}
+\end{latin}
+
+هنگام اولین اجرای دستور \cmd{select}، هر رشته به همراه یک شماره‌ی متناظر در خروجی ظاهر شده و بلافاصله پس از آن، رشته‌ی اعلان (\en{Prompt}) نمایش داده می‌شود. در این مرحله، کاربر شماره‌ی گزینه‌ی مورد نظر خود را وارد می‌کند.
+
+دستور \cmd{select} متغیر محیطی \cmd{REPLY} را با مقدار دقیق وارد شده توسط کاربر مقداردهی کرده و هم‌زمان، رشته‌ی متناظر با آن گزینه را در متغیر تعریف‌شده (در اینجا \cmd{my\_choice}) قرار می‌دهد.
+
+\begin{latin}
+\begin{lstlisting}
+Your choice: 1
+REPLY= 1  my_choice= First
+
+Your choice: 2
+REPLY= 2  my_choice= Second
+\end{lstlisting}
+\end{latin}
+
+در این مثال، کاربر عدد «\cmd{1}» را وارد نموده و دستور \cmd{echo} مقادیر ذخیره‌شده در \cmd{REPLY} و \cmd{my\_choice} را چاپ می‌کند. فرآیند تکرار در دستور \cmd{select} تا زمانی که کاربر عدد «\cmd{5}» را وارد نکند، ادامه خواهد یافت. چنانچه ورودی کاربر نامعتبر باشد، \cmd{select} متغیر \cmd{my\_choice} را با یک رشته‌ی تهی (\en{null}) مقداردهی می‌کند. همچنین، در صورتی که کاربر بدون وارد کردن هیچ مقداری تنها کلید \en{Enter} را فشار دهد، \cmd{select} چرخه‌ی اجرا را بازنشانی کرده و فهرست گزینه‌ها را مجدداً نمایش می‌دهد.
+
+\begin{latin}
+\begin{lstlisting}
+Your choice: 6
+REPLY= 6  my_choice=
+
+Your choice: abc
+REPLY= abc  my_choice=
+\end{lstlisting}
+\end{latin}
+
+حلقه‌ی \cmd{select} تا زمان مواجهه با دستور \cmd{break} یا دریافت سیگنال پایان فایل (\en{EOF}) از طریق کلیدهای ترکیبی \cmd{Ctrl+D} به‌صورت نامحدود به کار خود ادامه می‌دهد.
+
+\begin{latin}
+\begin{lstlisting}
+Your choice: 5
+REPLY= 5  my_choice= Quit
+[me@linuxbox ~]$
+\end{lstlisting}
+\end{latin}
+
+یکی از قابلیت‌های فنی و متمایز \cmd{select} این است که فهرست گزینه‌ها و رشته‌ی اعلان (\en{Prompt}) را به‌جای خروجی استاندارد (\en{stdout})، بر روی خطای استاندارد (\en{stderr}) ارسال می‌کند. این ویژگی از آن جهت حائز اهمیت است که اجازه می‌دهد خروجیِ حاصل از پردازش دستوراتِ داخل حلقه، بدون تداخل با متنِ منو، به‌راحتی بازهدایت (\en{Redirection}) شود:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ select-demo > choices.txt
+\end{lstlisting}
+\end{latin}
+
+با اعمال این بازهدایت، منو و اعلانِ انتخاب همچنان بر روی نمایشگر ظاهر می‌شوند، اما خروجیِ دستور \cmd{echo} به فایل \file{choices.txt} منتقل می‌گردد.
+
+در ادامه، نسخه‌ی بازنویسی‌شده‌ی اسکریپت «گزارش‌گیری سیستم» را ملاحظه می‌کنید که در آن ساختار قبلی با دستور \cmd{select} جایگزین شده است:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# select-menu: a menu driven system information program
+
+DELAY=3 # Number of seconds to display results
+PS3="Enter selection [1-4] > "
+
+select str in \
+    "Display System Information" \
+    "Display Disk Space" \
+    "Display Home Space Utilization" \
+    "Quit"; do
+    if [[ "$REPLY" == "1" ]]; then
+        echo "Hostname: $HOSTNAME"
+        uptime
+        sleep "$DELAY"
+        continue
+    fi
+    if [[ "$REPLY" == "2" ]]; then
+        df -h
+        sleep "$DELAY"
+        continue
+    fi
+    if [[ "$REPLY" == "3" ]]; then
+        if [[ $(id -u) -eq 0 ]]; then
+            echo "Home Space Utilization (All Users)"
+            du -sh /home/* 2> /dev/null
+        else
+            echo "Home Space Utilization ($USER)"
+            du -sh "$HOME" 2> /dev/null
+        fi
+        sleep "$DELAY"
+        continue
+    fi
+    if [[ "$REPLY" == "4" ]]; then
+        break
+    fi
+    if [[ -z "$str" ]]; then
+        echo "Invalid entry."
+        sleep "$DELAY"
+    fi
+done
+echo "Program terminated."
+\end{lstlisting}
+\end{latin}
+
+در این معماری جایگزین، ابتدا متغیر محیطی \cmd{PS3} مقداردهی شده و سپس دستور \cmd{select} با چهار گزینه‌ی مشخص فراخوانی می‌گردد. اگرچه ارزیابی متغیر \cmd{str} (که حاوی متن گزینه‌ی انتخابی است) میسر بود، اما بررسی مستقیم متغیر \cmd{REPLY} (حاوی شماره‌ی گزینه) منطق ساده‌تری را برای کنترل جریان برنامه فراهم می‌کند. در انتهای بدنه، با بررسی تهی بودن متغیر \cmd{str}، ورودی‌های خارج از محدوده شناسایی و مدیریت می‌شوند.
+
+در مقام مقایسه میان این دو روش، باید اشاره کرد که اگرچه دستور \cmd{select} قابلیتی هوشمندانه محسوب می‌شود، اما به‌جز مزیت فنیِ ارسال منو به خطای استاندارد (\en{stderr})، عملاً منجر به کاهشِ چشمگیر حجم کدنویسی نمی‌شود. علاوه بر این، استفاده از این دستور، آزادی عمل برنامه‌نویس را در طراحی بصری و شخصی‌سازی چیدمان منو به شدت محدود می‌کند.
+
+\section{ساختار تکرار until}
+
+دستور \cmd{until} در منطق اجرایی شباهت بسیاری به \cmd{while} دارد، با این تفاوت بنیادین که رفتار آن در قبال «وضعیت خروج» (\en{Exit Status}) دقیقاً معکوس است. در حالی که حلقه‌ی \cmd{while} تا زمان برقراری شرط (وضعیت خروج صفر) به کار خود ادامه می‌دهد، حلقه‌ی \cmd{until} تا زمانی استمرار می‌یابد که وضعیت خروج دستورات، غیرصفر باشد؛ به عبارتی دیگر، این حلقه زمانی متوقف می‌شود که شرط تعیین‌شده برای نخستین بار درست (\en{true}) ارزیابی شود (یعنی کد خروج صفر به دست آید).
+
+در اسکریپت \cmd{while-count}، تکرار را تا زمانی که مقدار متغیر \cmd{count} کوچک‌تر یا مساوی ۵ بود ادامه دادیم. اکنون می‌توانیم همان خروجی را با استفاده از ساختار \cmd{until} بازنویسی کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# until-count: display a series of numbers
+
+count=1
+
+until [[ "$count" -gt 5 ]]; do
+    echo "$count"
+    count=$((count + 1))
+done
+echo "Finished."
+\end{lstlisting}
+\end{latin}
+
+در این نمونه، با تغییر عبارت شرطی به:
+
+\begin{latin}
+\begin{lstlisting}
+[[ "$count" -gt 5 ]]
+\end{lstlisting}
+\end{latin}
+
+حلقه‌ی \cmd{until} تا زمانی که مقدار متغیر از ۵ فراتر نرفته است به تکرار ادامه می‌دهد و به محض آنکه شرط «بزرگ‌تر بودن از ۵» محقق شود، متوقف می‌گردد. انتخاب میان \cmd{while} یا \cmd{until} معمولاً به منطق برنامه بستگی دارد؛ هدف همواره انتخاب ساختاری است که خواناییِ شرط و وضوح کد را برای برنامه‌نویس ارتقا دهد.
+
+\section{پردازش فایل‌ها با حلقه‌ها}
+
+ساختارهای \cmd{while} و \cmd{until} توانایی پردازش ورودی استاندارد (\en{stdin}) را دارا هستند؛ این ویژگی امکان پیمایش و پردازش خط‌به‌خط فایل‌ها را فراهم می‌کند. در نمونه‌ی زیر، محتویات فایل \file{distros.txt} (که در فصول پیشین استفاده شد) به کمک حلقه‌ی \cmd{while} پردازش و نمایش داده می‌شود:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# while-read: read lines from a file
+
+while read -r distro version release; do
+    printf "Distro: %s\tVersion: %s\tReleased: %s\n" \
+        "$distro" \
+        "$version" \
+        "$release"
+done < distros.txt
+\end{lstlisting}
+\end{latin}
+
+جهت بازهدایت ورودی یک فایل به درون حلقه، عملگر بازهدایت (\cmd{<}) را پس از کلمه‌ی کلیدی \cmd{done} قرار می‌دهیم. در این ساختار، دستور \cmd{read} فیلدهای هر سطر را از فایل ورودی استخراج کرده و تا زمانی که به انتهای فایل (\en{EOF}) نرسیده است، وضعیت خروج صفر برمی‌گرداند. به محض اتمام فایل، \cmd{read} وضعیت خروج غیرصفر صادر کرده و در نتیجه حلقه متوقف می‌شود.
+
+علاوه بر بازهدایت مستقیم، می‌توان ورودی استاندارد را از طریق پایپ‌لاین (\en{Pipeline}) نیز به حلقه تزریق کرد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# while-read2: read lines from a file
+
+sort -k 1,1 -k 2n distros.txt | while read -r distro version release; do
+    printf "Distro: %s\tVersion: %s\tReleased: %s\n" \
+        "$distro" \
+        "$version" \
+        "$release"
+done
+\end{lstlisting}
+\end{latin}
+
+در این مثال، خروجی مرتب‌شده‌ی دستور \cmd{sort} به عنوان جریان ورودی به حلقه ارسال می‌شود. با این حال، رعایت یک نکته‌ی فنی بسیار حیاتی است: از آنجا که استفاده از پایپ باعث اجرای حلقه در یک زیرپوسته (\en{Subshell}) می‌شود، تمامی متغیرهایی که درون حلقه تعریف یا مقداردهی می‌شوند، پس از اتمام اجرای حلقه نابود شده و در پوسته اصلی قابل دسترسی نخواهند بود.
+
+\section{جمع‌بندی}
+
+با بررسی ساختارهای تکرار (\en{Loops}) و مرور مباحث پیشین پیرامون شاخه‌بندی (\en{Branching})، زیرروال‌ها (\en{Subroutines}) و توالی‌ها (\en{Sequences})، اکنون بر مفاهیم کلیدی کنترل جریان (\en{Control Flow}) در اسکریپت‌نویسی \en{Bash} مسلط شده‌ایم. اگرچه \en{Bash} قابلیت‌ها و تکنیک‌های پیشرفته‌تری را نیز در بر می‌گیرد، اما همگی آن‌ها در حقیقت بهبودها و افزونه‌هایی بر همین مفاهیم بنیادین محسوب می‌شوند.
+
+\section{منابع مطالعه تکمیلی}
+
+راهنمای \en{Bash} برای مبتدیان (\en{Bash Guide for Beginners}) از پروژه مستندسازی لینوکس (\en{Linux Documentation Project})، مثال‌های بیشتری از حلقه‌های \cmd{while} را ارائه می‌دهد:
+
+\begin{latin}
+\url{http://tldp.org/LDP/Bash-Beginners-Guide/html/sect_09_02.html}
+\end{latin}
+
+ویکی‌پدیا نیز مقاله‌ای درباره حلقه‌ها (\en{loops}) دارد که بخشی از یک مقاله جامع‌تر پیرامون کنترل جریان (\en{flow control}) است:
+
+\begin{latin}
+\url{http://en.wikipedia.org/wiki/Control_flow#Loops}
+\end{latin}

@@ -1,0 +1,770 @@
+\chapter{کنترل جریان با شاخه‌بندی if}
+
+در فصل گذشته، با چالش مهمی روبرو شدیم: چگونه می‌توان اسکریپت گزارش‌گیر سیستم را به‌گونه‌ای بازطراحی کرد که با سطح دسترسی‌های کاربرِ اجراکننده سازگار شود؟ پاسخ به این پرسش در توانایی اسکریپت برای تغییر «مسیر اجرا» بر اساس نتیجه‌ی یک آزمون منطقی نهفته است. در ادبیات برنامه‌نویسی، به این قابلیت شاخه‌بندی (\en{Branching}) گفته می‌شود.
+
+بیایید یک نمونه‌ی ساده از این منطق را در قالب شبه‌کد (\en{Pseudocode}) بررسی کنیم؛ زبانی انتزاعی که برای درک بهتر منطق برنامه توسط انسان، بدون درگیری با پیچیدگی‌های نحوی، استفاده می‌شود:
+
+\begin{latin}
+\begin{lstlisting}
+X = 5
+If X = 5, then:
+        Say "X equals 5."
+Otherwise:
+        Say "X does not equal 5."
+\end{lstlisting}
+\end{latin}
+
+این قطعه کد، نمونه‌ای بارز از یک ساختار شاخه‌بندی است. در اینجا، بر اساس برقراری شرط «اگر \en{X} برابر با ۵ بود»، برنامه یک مسیر مشخص را طی می‌کند (اعلام مقدار ۵) و در صورت عدم برقراری شرط، مسیر جایگزین را انتخاب کرده و خروجی متفاوتی را ارائه می‌دهد.
+
+\section{ساختار شرطی if}
+
+در پوسته می‌توانیم منطق فوق را به صورت زیر کدنویسی کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+x=5
+
+if [ "$x" -eq 5 ]; then
+    echo "x equals 5."
+else
+    echo "x does not equal 5."
+fi
+\end{lstlisting}
+\end{latin}
+
+همچنین امکان اجرای مستقیم این دستور در خط فرمان (با ساختاری کمی کوتاه‌تر) وجود دارد:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ x=5
+[me@linuxbox ~]$ if [ "$x" -eq 5 ]; then echo "equals 5"; else echo "does not equal 5"; fi
+equals 5
+[me@linuxbox ~]$ x=0
+[me@linuxbox ~]$ if [ "$x" -eq 5 ]; then echo "equals 5"; else echo "does not equal 5"; fi
+does not equal 5
+\end{lstlisting}
+\end{latin}
+
+در این مثال، دستور را دو بار اجرا کردیم؛ نخست با مقدار \cmd{x=5} که منجر به چاپ رشته «\en{equals 5}» شد و بار دوم با مقدار \cmd{x=0} که خروجی «\en{does not equal 5}» را در پی داشت.
+
+دستور مرکب (\en{Compound Command}) \cmd{if} دارای ساختار نحوی (\en{Syntax}) زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+if commands; then
+    commands
+[elif commands; then
+    commands...]
+[else
+    commands]
+fi
+\end{lstlisting}
+\end{latin}
+
+در این ساختار، \file{commands} بیانگر لیستی از دستورات است. اگرچه این نحو در نگاه نخست کمی پیچیده به نظر می‌رسد، اما پیش از تبیین آن، لازم است درک کنیم که مفسر پوسته چگونه «موفقیت» یا «شکست» در اجرای یک دستور را ارزیابی می‌کند.
+
+\section{وضعیت خروج (Exit Status)}
+
+دستورات (شامل اسکریپت‌ها و توابع پوسته) پس از اتمام فرآیند اجرا، مقداری عددی را به سیستم بازمی‌گردانند که وضعیت خروج نامیده می‌شود. این مقدار که عددی صحیح در بازه 0 تا 255 است، بیانگر موفقیت یا شکست در اجرای دستور است. طبق قراردادهای لینوکس، مقدار صفر نشانه موفقیت قطعی و هر مقداری غیر از صفر نشانه بروز خطا یا شکست است. پوسته پارامتر ویژه‌ای به نام \cmd{\$?} در اختیار ما قرار می‌دهد که از طریق آن می‌توان وضعیت خروج آخرین دستور اجرا شده را رصد کرد:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ ls -d /usr/bin
+/usr/bin
+[me@linuxbox ~]$ echo $?
+0
+[me@linuxbox ~]$ ls -d /bin/usr
+ls: cannot access /bin/usr: No such file or directory
+[me@linuxbox ~]$ echo $?
+2
+\end{lstlisting}
+\end{latin}
+
+در این مثال، دستور \cmd{ls} دو بار فراخوانی شده است. در نوبت نخست، دستور با موفقیت اجرا شده و مقدار پارامتر \cmd{\$?} برابر با صفر است. در نوبت دوم، به دلیل ارجاع به دایرکتوری ناموجود، دستور با خطا مواجه گشته و مقدار پارامتر \cmd{\$?} به عدد \cmd{2} تغییر می‌یابد که نشان‌دهنده شکست عملیات است. در حالی که برخی فرامین از کدهای خروج متنوع برای عیب‌یابی دقیق‌تر استفاده می‌کنند، اکثر آن‌ها در صورت بروز هرگونه خطا، صرفاً مقدار \cmd{1} را بازمی‌گردانند. بخش «\en{Exit Status}» در صفحات راهنمای لینوکس (\en{man pages}) جزئیات این کدها را تشریح می‌کند، اما قاعده کلی همواره ثابت است: صفر یعنی موفقیت.
+
+پوسته دارای دو دستور داخلی (\en{Built-in}) بسیار ساده به نام‌های \cmd{true} و \cmd{false} است که تنها وظیفه‌ی آن‌ها خروج با وضعیت مشخص است؛ \cmd{true} همواره با وضعیت \cmd{0} و \cmd{false} همواره با وضعیت \cmd{1} خاتمه می‌یابد:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ true
+[me@linuxbox ~]$ echo $?
+0
+[me@linuxbox ~]$ false
+[me@linuxbox ~]$ echo $?
+1
+\end{lstlisting}
+\end{latin}
+
+از این دستورات می‌توان برای تحلیل رفتار ساختار \cmd{if} بهره برد. در واقع، \cmd{if} تنها به بررسی موفقیت یا شکست دستورات پس از خود می‌پردازد:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ if true; then echo "It's true."; fi
+It's true.
+[me@linuxbox ~]$ if false; then echo "It's true."; fi
+[me@linuxbox ~]$
+\end{lstlisting}
+\end{latin}
+
+همان‌طور که مشاهده می‌شود، دستور \cmd{echo} تنها زمانی اجرا می‌گردد که فرمانِ متعاقبِ \cmd{if} با موفقیت (وضعیت \cmd{0}) پایان یابد. چنانچه فهرستی از دستورات در مقابل \cmd{if} قرار گیرد، ملاک ارزیابی، وضعیت خروج آخرین دستور در آن لیست خواهد بود:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ if false; true; then echo "It's true."; fi
+It's true.
+[me@linuxbox ~]$ if true; false; then echo "It's true."; fi
+[me@linuxbox ~]$
+\end{lstlisting}
+\end{latin}
+
+\section{دستور test}
+
+کاربردی‌ترین ابزاری که در ترکیب با ساختار \cmd{if} به کار می‌رود، دستور \cmd{test} است. این دستور وظیفه‌ی ارزیابی طیف گسترده‌ای از شروط و مقایسه‌ها را بر عهده دارد. دستور \cmd{test} به دو شیوه‌ی معادل پیاده‌سازی می‌شود؛ روش نخست:
+
+\begin{latin}
+\begin{lstlisting}
+test expression
+\end{lstlisting}
+\end{latin}
+
+و روش دوم که به دلیل خوانایی بالاتر، محبوبیت بیشتری میان برنامه‌نویسان لینوکس دارد:
+
+\begin{latin}
+\begin{lstlisting}
+[ expression ]
+\end{lstlisting}
+\end{latin}
+
+در هر دو حالت، \file{expression} عبارتی است که در نهایت به یکی از دو ارزش «درست» (\en{True}) یا «نادرست» (\en{False}) ختم می‌شود. چنانچه عبارت صحیح ارزیابی شود، دستور \cmd{test} وضعیت خروج صفر را بازمی‌گرداند و در غیر این صورت، وضعیت خروج یک صادر می‌شود.
+
+\begin{note}
+\textbf{نکته:} هر دو مورد \cmd{test} و \cmd{]} در واقع دستوراتی اجرایی هستند. در مفسر \en{Bash}، این فرامین به صورت دستورات داخلی (\en{Built-in}) پیاده‌سازی شده‌اند، اما برای حفظ سازگاری با سایر پوسته‌ها، نسخه‌های مستقل آن‌ها در مسیر \file{/usr/bin/} نیز موجود است. در واقع، آنچه میان دو براکت قرار می‌گیرد، آرگومان‌های ورودی دستور \cmd{]} محسوب می‌شوند؛ از این رو، درج کاراکتر نهایی \cmd{]} به عنوان آخرین آرگومان برای بستن دستور الزامی است.
+\end{note}
+
+دستورات \cmd{test} و \cmd{]} از مجموعه‌ی بسیار متنوعی از شرط‌ها پشتیبانی می‌کنند که می‌توان آن‌ها را در سه دسته‌ی کلی طبقه‌بندی کرد:
+
+\begin{itemize}
+  \item \textbf{شرط‌های فایل:} جهت بررسی وجود، نوع و مجوزهای دسترسی فایل‌ها.
+  \item \textbf{مقایسه‌های رشته‌ای:} برای بررسی برابری یا عدم برابری متون.
+  \item \textbf{مقایسه‌های عددی:} جهت سنجش روابط میان اعداد صحیح.
+\end{itemize}
+
+\section{عبارات شرطی وضعیت فایل}
+
+جدول زیر مجموعه‌ای از عبارات کاربردی برای ارزیابی وضعیت و ویژگی‌های فایل‌ها در لینوکس را ارائه می‌دهد. این شرط‌ها در اسکریپت‌نویسی برای اطمینان از وجود فایل یا بررسی مجوزهای دسترسی پیش از اجرای دستورات، حیاتی هستند.
+
+\begin{longtable}{l p{0.72\textwidth}}
+\caption{عبارات شرطی وضعیت فایل}
+\label{tab:file-conditions} \\
+\toprule
+\textbf{عبارت} & \textbf{شرط برقراری (ارزش درست)} \\
+\midrule
+\endfirsthead
+
+\multicolumn{2}{c}{\tablename\ \thetable{} (ادامه) \rule[-0.4em]{0pt}{1.4em}} \\
+\toprule
+\textbf{عبارت} & \textbf{شرط برقراری (ارزش درست)} \\
+\midrule
+\endhead
+
+\midrule
+\multicolumn{2}{r}{\footnotesize ادامه در صفحه‌ی بعد \ldots} \\
+\endfoot
+
+\bottomrule
+\endlastfoot
+
+\cmd{file1 -ef file2} & دو فایل دارای شماره آی‌نود (\en{inode}) یکسان باشند (یعنی از طریق پیوند سخت (\en{Hard link}) به یک فایل اشاره کنند). \\
+\addlinespace
+\cmd{file1 -nt file2} & فایل اول از فایل دوم جدیدتر باشد (\en{newer than}). \\
+\addlinespace
+\cmd{file1 -ot file2} & فایل اول از فایل دوم قدیمی‌تر باشد (\en{older than}). \\
+\addlinespace
+\cmd{-b file} & فایل وجود داشته باشد و از نوع دستگاه بلوکی (\en{Block device}) باشد، مانند هارددیسک. \\
+\addlinespace
+\cmd{-c file} & فایل وجود داشته باشد و از نوع دستگاه کاراکتری (\en{Character device}) باشد، مانند ترمینال. \\
+\addlinespace
+\cmd{-d file} & فایل وجود داشته باشد و یک دایرکتوری باشد. \\
+\addlinespace
+\cmd{-e file} & فایل وجود داشته باشد (\en{exists}). \\
+\addlinespace
+\cmd{-f file} & فایل وجود داشته باشد و یک فایل معمولی (\en{Regular file}) باشد. \\
+\addlinespace
+\cmd{-g file} & فایل وجود داشته باشد و پرچم \en{set-group-ID} برای آن فعال باشد. \\
+\addlinespace
+\cmd{-G file} & فایل وجود داشته باشد و متعلق به شناسه گروه مؤثر (\en{effective group ID}) کاربر جاری باشد. \\
+\addlinespace
+\cmd{-k file} & فایل وجود داشته باشد و \en{Sticky bit} برای آن تنظیم شده باشد. \\
+\addlinespace
+\cmd{-L file} & فایل وجود داشته باشد و یک پیوند نمادین (\en{Symbolic link}) باشد. \\
+\addlinespace
+\cmd{-O file} & فایل وجود داشته باشد و متعلق به شناسه کاربر مؤثر (\en{effective user ID}) کاربر جاری باشد. \\
+\addlinespace
+\cmd{-p file} & فایل وجود داشته باشد و یک پایپ نام‌گذاری‌شده (\en{Named pipe / FIFO}) باشد. \\
+\addlinespace
+\cmd{-r file} & فایل وجود داشته باشد و کاربر جاری اجازه خواندن آن را داشته باشد. \\
+\addlinespace
+\cmd{-s file} & فایل وجود داشته باشد و اندازه آن بزرگ‌تر از صفر باشد (خالی نباشد). \\
+\addlinespace
+\cmd{-S file} & فایل وجود داشته باشد و یک سوکت شبکه (\en{Network socket}) باشد. \\
+\addlinespace
+\cmd{-t fd} & توصیف‌گر فایل (\en{File Descriptor}) مشخص‌شده با \file{fd} به یک ترمینال متصل باشد (کاربردی برای تشخیص هدایت ورودی/خروجی). \\
+\addlinespace
+\cmd{-u file} & فایل وجود داشته باشد و پرچم \en{setuid} برای آن فعال باشد. \\
+\addlinespace
+\cmd{-w file} & فایل وجود داشته باشد و کاربر جاری اجازه نوشتن در آن را داشته باشد. \\
+\addlinespace
+\cmd{-x file} & فایل وجود داشته باشد و برای کاربر جاری قابل اجرا باشد؛ در مورد دایرکتوری، به معنای قابلیت پیمایش (\en{traverse}) آن است. \\
+
+\end{longtable}
+
+در ادامه، اسکریپتی ارائه شده است که برخی از پرکاربردترین عبارات شرطی فایل را نشان می‌دهد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# test-file: Evaluate the status of a file
+
+FILE=~/.bashrc
+
+if [ -e "$FILE" ]; then
+    if [ -f "$FILE" ]; then
+        echo "$FILE is a regular file."
+    fi
+    if [ -d "$FILE" ]; then
+        echo "$FILE is a directory."
+    fi
+    if [ -r "$FILE" ]; then
+        echo "$FILE is readable."
+    fi
+    if [ -w "$FILE" ]; then
+        echo "$FILE is writable."
+    fi
+    if [ -x "$FILE" ]; then
+        echo "$FILE is executable/searchable."
+    fi
+else
+    echo "$FILE does not exist"
+    exit 1
+fi
+
+exit
+\end{lstlisting}
+\end{latin}
+
+این اسکریپت، فایلی را که به متغیر \cmd{FILE} تخصیص یافته ارزیابی کرده و نتایج حاصل را گام‌به‌گام نمایش می‌دهد. در این کد، دو نکته‌ حائز اهمیت وجود دارد:
+
+نخست، قرار دادن پارامتر \cmd{\$FILE} درون دابل‌کوتیشن (\cmd{" "}) در داخل کروشه‌ها است. این اقدام صرفاً یک انتخاب ظاهری نیست، بلکه راهکاری دفاعی برای جلوگیری از خطاهای نحوی در شرایطی است که متغیر خالی باشد یا تنها شامل فواصل خالی (\en{Whitespace}) باشد. اگر متغیر بدون کوتیشن و خالی باشد، مفسر پوسته با خطا مواجه می‌شود؛ زیرا عملگرها به جای پارامتر، رشته‌های تهی را می‌بینند که ساختار دستور را به هم می‌ریزد. استفاده از کوتیشن تضمین می‌کند که همواره یک رشته (حتی رشته تهی) در مقابل عملگر قرار می‌گیرد.
+
+نکته دوم، به‌کارگیری دستور \cmd{exit} در بخش‌های مختلف اسکریپت است. دستور \cmd{exit} یک آرگومان عددی اختیاری می‌پذیرد که به عنوان وضعیت خروج اسکریپت به سیستم ارسال می‌شود. در صورت عدم تعیین این عدد، وضعیت خروج آخرین دستور اجرا شده به عنوان پیش‌فرض در نظر گرفته می‌شود. در این مثال، از \cmd{exit 1} استفاده شده است تا در صورت عدم وجود فایل، اسکریپت وضعیت شکست را گزارش دهد. دستور \cmd{exit} نهایی در انتهای فایل نیز جنبه‌ی صوری دارد؛ چرا که اسکریپت به طور طبیعی پس از رسیدن به انتهای خطوط با وضعیت خروج آخرین دستور خاتمه می‌یابد.
+
+به همین ترتیب، توابع پوسته نیز می‌توانند با ارسال یک آرگومان صحیح به دستور \cmd{return} (به جای \cmd{exit})، وضعیت خروج خود را به برنامه‌ی فراخوان بازگردانند. اگر قصد داشته باشیم اسکریپت فوق را به عنوان یک تابع در یک پروژه‌ی بزرگ‌تر ادغام کنیم، ساختار آن به شکل زیر خواهد بود:
+
+\begin{latin}
+\begin{lstlisting}
+test_file () {
+    # test-file: Evaluate the status of a file
+    FILE=~/.bashrc
+
+    if [ -e "$FILE" ]; then
+        if [ -f "$FILE" ]; then
+            echo "$FILE is a regular file."
+        fi
+        if [ -d "$FILE" ]; then
+            echo "$FILE is a directory."
+        fi
+        if [ -r "$FILE" ]; then
+            echo "$FILE is readable."
+        fi
+        if [ -w "$FILE" ]; then
+            echo "$FILE is writable."
+        fi
+        if [ -x "$FILE" ]; then
+            echo "$FILE is executable/searchable."
+        fi
+    else
+        echo "$FILE does not exist"
+        return 1
+    fi
+}
+\end{lstlisting}
+\end{latin}
+
+\section{عبارات شرطی رشته‌ای (String Expressions)}
+
+جدول زیر عبارات مورد استفاده برای ارزیابی و مقایسه‌ی رشته‌ها را فهرست می‌کند:
+
+\begin{table}[htbp]
+\centering
+\caption{عبارات شرطی مقایسه رشته‌ها}
+\label{tab:string-conditions}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{عبارت} & \textbf{شرط برقراری (ارزش درست)} \\
+\midrule
+\cmd{string} & رشته تهی (خالی) نباشد. \\
+\addlinespace
+\cmd{-n string} & طول رشته بزرگ‌تر از صفر باشد. \\
+\addlinespace
+\cmd{-z string} & طول رشته برابر صفر باشد (\en{Zero length}). \\
+\addlinespace
+\cmd{string1 = string2} & دو رشته با یکدیگر برابر باشند. در این عبارت می‌توان هم از علامت مساوی تکی (\cmd{=}) و هم دوتایی (\cmd{==}) استفاده کرد. \\
+\addlinespace
+\cmd{string1 == string2} & دو رشته با یکدیگر برابر باشند. استفاده از \cmd{==} در مفسر \en{Bash} رایج و متداول است، اما با استاندارد \en{POSIX} سازگاری کامل ندارد. \\
+\addlinespace
+\cmd{string1 != string2} & دو رشته با یکدیگر برابر نباشند. \\
+\addlinespace
+\cmd{string1 > string2} & رشته اول در ترتیب مرتب‌سازی (\en{Sort order})، پس از رشته دوم قرار گیرد. \\
+\addlinespace
+\cmd{string1 < string2} & رشته اول در ترتیب مرتب‌سازی، پیش از رشته دوم قرار گیرد. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{warning}
+\textbf{هشدار فنی:} عملگرهای \cmd{>} و \cmd{<} هنگام استفاده در دستور \cmd{test} باید حتماً درون کوتیشن قرار گرفته یا با نویسه‌ی گریز (\en{Backslash}) مهار شوند (\cmd{\textbackslash<}). در غیر این صورت، پوسته آن‌ها را به عنوان عملگرهای هدایت (\en{Redirection}) تفسیر می‌کند که می‌تواند منجر به بازنویسی ناخواسته‌ی فایل‌ها و نتایج مخرب شود. همچنین شایان ذکر است که برخلاف مستندات \en{Bash} که ادعا می‌کنند ترتیب مرتب‌سازی بر اساس پیکربندی زبان بومی سیستم (\en{Locale}) انجام می‌شود، نسخه‌های \en{Bash} تا پیش از ۴.۰ همچنان از ترتیب \en{ASCII} (استاندارد \en{POSIX}) تبعیت می‌کردند؛ این مغایرت سرانجام در نسخه ۴.۱ اصلاح گردید.
+\end{warning}
+
+در ادامه، اسکریپتی ارائه شده است که نحوه‌ی به‌کارگیری عبارات شرطی رشته‌ای را نشان می‌دهد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# test-string: evaluate the value of a string
+
+ANSWER=maybe
+
+if [ -z "$ANSWER" ]; then
+    echo "There is no answer." >&2
+    exit 1
+fi
+
+if [ "$ANSWER" == "yes" ]; then
+    echo "The answer is YES."
+elif [ "$ANSWER" == "no" ]; then
+    echo "The answer is NO."
+elif [ "$ANSWER" == "maybe" ]; then
+    echo "The answer is MAYBE."
+else
+    echo "The answer is UNKNOWN."
+fi
+\end{lstlisting}
+\end{latin}
+
+در این اسکریپت، ثابت \cmd{ANSWER} مورد ارزیابی قرار می‌گیرد. در نخستین گام، با استفاده از عملگر \cmd{-z} بررسی می‌شود که آیا رشته تهی است یا خیر. در صورت تهی بودن، اجرای اسکریپت متوقف شده و وضعیت خروج (\en{Exit Status}) برابر با \cmd{1} بازگردانده می‌شود.
+
+نکته‌ی فنی مهم در این بخش، نحوه‌ی هدایت پیام خطا در دستور \cmd{echo} است؛ استفاده از \cmd{2>\&1} باعث می‌شود پیام \en{``There is no answer''} به‌جای خروجی استاندارد، به خروجی خطای استاندارد (\en{stderr}) ارسال شود. این رویکرد، مطابق با اصول استاندارد برنامه‌نویسی در محیط لینوکس برای مدیریت پیام‌های سیستمی است.
+
+در صورتی که رشته حاوی مقدار باشد، برنامه وارد بدنه دوم شرط می‌شود تا برابری آن را با مقادیر \en{``yes''}، \en{``no''} یا \en{``maybe''} بسنجد. این فرآیند با بهره‌گیری از \cmd{elif} انجام شده است. \cmd{elif} که کوته‌نوشت عبارت \en{``else if''} است، امکان طراحی ساختارهای شرطی چندگانه و سلسله‌مراتبی را فراهم می‌کند تا بتوان منطق‌های پیچیده‌تر را به شکلی منظم پیاده‌سازی کرد.
+
+\section{عبارات شرطی اعداد صحیح (Integer Expressions)}
+
+برای مقایسه مقادیر عددی در قالب اعداد صحیح (به‌جای رشته‌های متنی)، از عملگرهای اختصاصی جدول زیر استفاده می‌شود:
+
+\begin{table}[htbp]
+\centering
+\caption{عبارات شرطی مقایسه اعداد صحیح}
+\label{tab:integer-conditions}
+\begin{tabularx}{\textwidth}{l X}
+\toprule
+\textbf{عبارت} & \textbf{شرط برقراری (ارزش درست)} \\
+\midrule
+\cmd{integer1 -eq integer2} & عدد اول با عدد دوم برابر باشد (\en{Equal}). \\
+\addlinespace
+\cmd{integer1 -ne integer2} & عدد اول با عدد دوم برابر نباشد (\en{Not Equal}). \\
+\addlinespace
+\cmd{integer1 -le integer2} & عدد اول کوچک‌تر یا مساوی عدد دوم باشد (\en{Less than or Equal}). \\
+\addlinespace
+\cmd{integer1 -lt integer2} & عدد اول کوچک‌تر از عدد دوم باشد (\en{Less Than}). \\
+\addlinespace
+\cmd{integer1 -ge integer2} & عدد اول بزرگ‌تر یا مساوی عدد دوم باشد (\en{Greater than or Equal}). \\
+\addlinespace
+\cmd{integer1 -gt integer2} & عدد اول بزرگ‌تر از عدد دوم باشد (\en{Greater Than}). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+در ادامه، اسکریپتی جهت نمایش کاربرد این عملگرها ارائه شده است:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# test-integer: evaluate the value of an integer.
+
+INT=-5
+
+if [ -z "$INT" ]; then
+    echo "INT is empty." >&2
+    exit 1
+fi
+
+if [ "$INT" -eq 0 ]; then
+    echo "INT is zero."
+else
+    if [ "$INT" -lt 0 ]; then
+        echo "INT is negative."
+    else
+        echo "INT is positive."
+    fi
+    if [ $((INT % 2)) -eq 0 ]; then
+        echo "INT is even."
+    else
+        echo "INT is odd."
+    fi
+fi
+\end{lstlisting}
+\end{latin}
+
+بخش حائز اهمیت در این اسکریپت، مکانیسم تشخیص زوج یا فرد بودن عدد است. این فرآیند با بهره‌گیری از عملگر باقی‌مانده (\en{Modulo}) در یک ساختار محاسباتی انجام می‌شود؛ به این صورت که عدد بر ۲ تقسیم شده و باقی‌مانده‌ی حاصل ارزیابی می‌گردد. چنانچه باقی‌مانده صفر باشد، عدد زوج و در غیر این صورت، فرد قلمداد می‌شود.
+
+\section{ساختار [[ ]]: نسخه ارتقایافته دستور test}
+
+نسخه‌های مدرن \en{Bash} شامل یک دستور مرکب (\en{Compound Command}) هستند که به عنوان جایگزینی قدرتمند و انعطاف‌پذیر برای \cmd{test} عمل می‌کند. نحو (\en{Syntax}) این دستور به شرح زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+[[ expression ]]
+\end{lstlisting}
+\end{latin}
+
+این ساختار مشابه \cmd{test} عمل کرده و تمامی عبارات آن را پشتیبانی می‌کند، اما یک قابلیت کلیدی و بسیار مهم در حوزه‌ی پردازش رشته‌ها به آن افزوده شده است:
+
+\begin{latin}
+\begin{lstlisting}
+string1 =~ regex
+\end{lstlisting}
+\end{latin}
+
+این عبارت زمانی ارزش «درست» بازمی‌گرداند که رشته‌ی \file{string1} با عبارت باقاعده توسعه‌یافته (\en{Extended Regular Expression}) مطابقت داشته باشد. این ویژگی امکانات گسترده‌ای از جمله اعتبارسنجی داده‌ها (\en{Data Validation}) را فراهم می‌کند. در مثال قبلیِ مقایسه‌ی اعداد صحیح، اگر متغیر \cmd{INT} حاوی مقداری غیرعددی می‌بود، اسکریپت با خطا مواجه می‌شد. برای رفع این نقیصه، اسکریپت باید ابتدا از عدد بودن مقدار ورودی اطمینان حاصل کند:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# test-integer2: evaluate the value of an integer.
+
+INT=-5
+
+if [[ "$INT" =~ ^-?[0-9]+$ ]]; then
+    if [ "$INT" -eq 0 ]; then
+        echo "INT is zero."
+    else
+        if [ "$INT" -lt 0 ]; then
+            echo "INT is negative."
+        else
+            echo "INT is positive."
+        fi
+    fi
+    if [ $((INT % 2)) -eq 0 ]; then
+        echo "INT is even."
+    else
+        echo "INT is odd."
+    fi
+else
+    echo "INT is not an integer." >&2
+    exit 1
+fi
+\end{lstlisting}
+\end{latin}
+
+با به‌کارگیری عبارت باقاعده:
+
+\begin{latin}
+\begin{lstlisting}
+^-?[0-9]+$
+\end{lstlisting}
+\end{latin}
+
+مقدار \cmd{INT} صرفاً به رشته‌هایی محدود می‌شود که ممکن است با یک علامت منفی اختیاری شروع شده و لزوماً با یک یا چند رقم ادامه یابند. این الگو همچنین احتمال ورودی خالی را منتفی می‌کند.
+
+ویژگی برجسته‌ی دیگر در ساختار \cmd{[[ ]]} این است که عملگر \cmd{==} از تطبیق الگو (\en{Pattern Matching}) به روشی مشابه با بسط مسیر (\en{Pathname Expansion}) پشتیبانی می‌کند. به مثال زیر توجه کنید:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ FILE=foo.bar
+[me@linuxbox ~]$ if [[ $FILE == foo.* ]]; then
+> echo "$FILE matches pattern 'foo.*'"
+> fi
+foo.bar matches pattern 'foo.*'
+\end{lstlisting}
+\end{latin}
+
+این قابلیت، ساختار \cmd{[[ ]]} را به ابزاری بسیار کارآمد برای ارزیابی نام فایل‌ها، پسوندها و مسیرهای سیستمی مبدل ساخته است.
+
+\section{ساختار (( )): بهینه‌شده برای محاسبات عددی}
+
+مفسر \en{Bash} علاوه بر دستور مرکب \cmd{[[ ]]} از ساختار مختص به خود یعنی \cmd{(( ))} نیز بهره می‌برد که به طور ویژه برای عملیات روی اعداد صحیح (\en{Integers}) طراحی شده است. این دستور از مجموعه‌ی کاملی از ارزیابی‌های حسابی پشتیبانی می‌کند که در فصل ۳۴ به تفصیل بررسی خواهیم کرد.
+
+در ساختار \cmd{(( ))} ملاکِ «درست» بودن یک شرط، مقدار خروجیِ عملیات ریاضی است؛ به این صورت که اگر نتیجه‌ی محاسبات عددی غیرصفر باشد، شرط برقرار (\en{True}) تلقی می‌شود و اگر نتیجه صفر باشد، شرط نادرست (\en{False}) ارزیابی می‌گردد.
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ if ((1)); then echo "It is true."; fi
+It is true.
+[me@linuxbox ~]$ if ((0)); then echo "It is true."; fi
+[me@linuxbox ~]$
+\end{lstlisting}
+\end{latin}
+
+با استفاده از این ساختار، می‌توان اسکریپت \file{test-integer2} را بازنویسی و ساده‌سازی کرد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# test-integer2a: evaluate the value of an integer.
+
+INT=-5
+
+if [[ "$INT" =~ ^-?[0-9]+$ ]]; then
+    if ((INT == 0)); then
+        echo "INT is zero."
+    else
+        if ((INT < 0)); then
+            echo "INT is negative."
+        else
+            echo "INT is positive."
+        fi
+        if (( (INT % 2)) == 0); then
+            echo "INT is even."
+        else
+            echo "INT is odd."
+        fi
+    fi
+else
+    echo "INT is not an integer." >&2
+    exit 1
+fi
+\end{lstlisting}
+\end{latin}
+
+در این نسخه، استفاده از عملگرهای مقایسه‌ای رایج مانند \cmd{==}، \cmd{<} و \cmd{>} به جای عملگرهای متنی دستور \cmd{test} (مثل \cmd{-eq} یا \cmd{-lt})، منجر به خوانایی بیشتر و منطق بصری طبیعی‌تر شده است. نکته‌ی فنی حائز اهمیت این است که چون \cmd{(( ))} یک ساختار نحوی درونی (\en{Shell Syntax}) است و منحصراً با اعداد صحیح سروکار دارد، می‌تواند نام متغیرها را مستقیماً شناسایی کند؛ بنابراین برای فراخوانی مقدار متغیر در داخل آن، نیازی به استفاده از علامت \cmd{\$} یا عملیات بسط (\en{Expansion}) نیست.
+
+\section{ترکیب عبارات و عملگرهای منطقی}
+
+امکان ترکیب چندین عبارت شرطی برای ایجاد ارزیابی‌های پیچیده‌تر وجود دارد. این فرآیند با استفاده از عملگرهای منطقی صورت می‌پذیرد؛ مفاهیمی که پیش‌تر در فصل ۱۷ (هنگام بررسی دستور \cmd{find}) با آن‌ها آشنا شدیم. برای دستور \cmd{test} و ساختار مدرن \cmd{[[ ]]} سه عملیات منطقی بنیادینِ \en{AND}، \en{OR} و \en{NOT} تعریف شده است. نکته‌ی مهم اینجاست که نحوه نگارش (\en{Syntax}) این عملگرها در هر یک از این دو ابزار متفاوت است:
+
+\begin{table}[htbp]
+\centering
+\caption{عملگرهای منطقی ترکیب عبارات شرطی}
+\label{tab:logical-operators}
+\begin{tabularx}{\textwidth}{l l l X}
+\toprule
+\textbf{عملیات} & \textbf{در دستور \cmd{test}} & \textbf{در \cmd{[[ ]]}} & \textbf{توضیح} \\
+\midrule
+\en{AND} (عطف منطقی) & \cmd{-a} & \cmd{\&\&} & بیانگر شرط «و» است؛ یعنی هر دو عبارت باید درست باشند. \\
+\addlinespace
+\en{OR} (فصل منطقی) & \cmd{-o} & \cmd{||} & بیانگر شرط «یا» است؛ یعنی کافی است حداقل یکی از عبارات درست باشد. \\
+\addlinespace
+\en{NOT} (نقیض) & \cmd{!} & \cmd{!} & بیانگر معکوس‌کردن (نفی) یک شرط است. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+در ادامه، نمونه‌ای از پیاده‌سازی عملیات \en{AND} را مشاهده می‌کنید. این اسکریپت بررسی می‌کند که آیا یک عدد صحیح در بازه‌ای مشخص قرار دارد یا خیر:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# test-integer3: determine if an integer is within a
+# specified range of values.
+
+MIN_VAL=1
+MAX_VAL=100
+
+INT=50
+
+if [[ "$INT" =~ ^-?[0-9]+$ ]]; then
+    if [[ "$INT" -ge "$MIN_VAL" && "$INT" -le "$MAX_VAL" ]]; then
+        echo "$INT is within $MIN_VAL to $MAX_VAL."
+    else
+        echo "$INT is out of range."
+    fi
+else
+    echo "INT is not an integer." >&2
+    exit 1
+fi
+\end{lstlisting}
+\end{latin}
+
+در این نمونه، شرطِ قرارگیری متغیر \cmd{INT} بین دو مقدار \cmd{MIN\_VAL} و \cmd{MAX\_VAL} تنها در یک بلوک \cmd{[[ ]]} و به واسطه عملگر \cmd{\&\&} بررسی شده است. همین منطق را می‌توان با استفاده از دستور سنتی \cmd{test} به شکل زیر پیاده‌سازی کرد:
+
+\begin{latin}
+\begin{lstlisting}
+if [ "$INT" -ge "$MIN_VAL" -a "$INT" -le "$MAX_VAL" ]; then
+    echo "$INT is within $MIN_VAL to $MAX_VAL."
+else
+    echo "$INT is out of range."
+fi
+\end{lstlisting}
+\end{latin}
+
+عملگر نقیض (\cmd{!}) نتیجه‌ی یک عبارت را معکوس می‌کند؛ بدین معنا که اگر عبارت نادرست باشد، خروجیِ کل شرط «درست» (\en{True}) خواهد بود. در اسکریپت زیر، منطق ارزیابی را تغییر داده‌ایم تا اعدادی را که خارج از بازه‌ی مذکور هستند، شناسایی کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# test-integer4: determine if an integer is outside a
+# specified range of values.
+
+MIN_VAL=1
+MAX_VAL=100
+
+INT=50
+
+if [[ "$INT" =~ ^-?[0-9]+$ ]]; then
+    if [[ ! ("$INT" -ge "$MIN_VAL" && "$INT" -le "$MAX_VAL") ]]; then
+        echo "$INT is outside $MIN_VAL to $MAX_VAL."
+    else
+        echo "$INT is in range."
+    fi
+else
+    echo "INT is not an integer." >&2
+    exit 1
+fi
+\end{lstlisting}
+\end{latin}
+
+در اینجا از پرانتز برای گروه‌بندی عبارات (\en{Expression Grouping}) استفاده شده است. بدون این پرانتزها، عملگر نقیض تنها بر عبارتِ نخست اعمال می‌شد و بر کلِ ترکیبِ منطقی اثر نمی‌گذاشت. پیاده‌سازی همین ساختار با دستور \cmd{test} الزامات سخت‌گیرانه‌تری دارد:
+
+\begin{latin}
+\begin{lstlisting}
+if [ ! \( "$INT" -ge "$MIN_VAL" -a "$INT" -le "$MAX_VAL" \) ];
+then
+    echo "$INT is outside $MIN_VAL to $MAX_VAL."
+else
+    echo "$INT is in range."
+fi
+\end{lstlisting}
+\end{latin}
+
+از آنجایی که برخلاف \cmd{[[ ]]} و \cmd{(( ))} که جزئی از ساختار داخلی پوسته هستند، تمامی اجزای دستور \cmd{test} توسط مفسر \en{Bash} به عنوان آرگومان‌های ورودی در نظر گرفته می‌شوند، کاراکترهایی که برای پوسته معنای خاصی دارند (مانند \cmd{<}، \cmd{>}، \cmd{(} و \cmd{)}) باید حتماً درون کوتیشن قرار گرفته یا با نویسه‌ی گریز (\cmd{\textbackslash}) مهار شوند تا از تفسیر اشتباه توسط پوسته جلوگیری شود.
+
+با وجود شباهت عملکردی میان این دو ابزار، انتخاب میان آن‌ها به حوزه‌ی کاربرد و نیاز به سازگاری اسکریپت بستگی دارد:
+
+\begin{itemize}
+  \item \textbf{ساختار سنتی \cmd{test} (یا \cmd{[ ]}):} این دستور بخشی از استاندارد \en{POSIX} است. به همین دلیل، در تمامی پوسته‌های منطبق با این استاندارد (مانند \cmd{sh} یا \cmd{dash}) به درستی اجرا می‌شود. استفاده از \cmd{test} در نگارش اسکریپت‌های سیستمی بنیادین، مانند اسکریپت‌های راه‌اندازی (\en{Init Scripts})، که باید در محیط‌های مختلف و با پوسته‌های حداقلی اجرا شوند، الزامی است.
+
+  \item \textbf{ساختار مدرن \cmd{[[ ]]}:} این ساختار یک کلمه‌ی کلیدی اختصاصی (\en{Keyword}) در \en{Bash} (و پوسته‌های پیشرفته‌ای نظیر \cmd{zsh} و \cmd{ksh}) محسوب می‌شود. از آنجایی که این عبارت بخشی از نحوِ درونی پوسته است، برخلاف دستور \cmd{test} با بسیاری از خطاهای رایج (مانند مشکل متغیرهای خالی یا نیاز به گریز دادن نویسه‌های خاص) مواجه نمی‌شود.
+\end{itemize}
+
+\textbf{نتیجه‌گیری فنی:} در حالی که تسلط بر دستور \cmd{test} به دلیل کاربرد گسترده‌اش در کدهای قدیمی و سیستمی ضروری است، اما در اسکریپت‌نویسی مدرن، ساختار \cmd{[[ ]]} به دلیل امنیت بالاتر، خوانایی بیشتر و قابلیت‌های پیشرفته (نظیر تطبیق الگو و عبارات باقاعده)، گزینه‌ی ارجح و استانداردِ توسعه‌دهندگان لینوکس به شمار می‌رود.
+
+\section{چالش سازگاری: تضاد میان پایداری و نوآوری}
+
+در میان کاربران باسابقه و سنتی یونیکس (\en{Unix})، گاهی با این دیدگاه مواجه می‌شویم که لینوکس را سیستمی «ناخالص» توصیف می‌کنند. یکی از اصول بنیادین در فرهنگ یونیکس، قابلیت حمل (\en{Portability}) است؛ به این معنا که یک اسکریپت باید بدون کوچک‌ترین تغییری، در تمامی سیستم‌های شبه‌یونیکس (\en{Unix-like}) قابل اجرا باشد.
+
+این رویکرد ریشه در تجربه‌ای تاریخی دارد. پیش از ظهور استاندارد \en{POSIX}، افزونه‌های اختصاصی که شرکت‌های مختلف به دستورات و پوسته‌ها می‌افزودند، یکپارچگی دنیای یونیکس را از بین برده بود. از همین رو، متخصصان قدیمی نسبت به ویژگی‌های منحصربه‌فرد لینوکس و تأثیر آن بر میراث یونیکس با احتیاط می‌نگرند و بر حفظ استانداردهای مشترک تأکید دارند.
+
+با این حال، اصرار بیش از حد بر قابلیت حمل، خللی جدی در مسیر پیشرفت ایجاد می‌کند: این رویکرد برنامه‌نویس را ناچار می‌سازد تا همواره بر اساس پایین‌ترین استاندارد مشترک عمل کند. در قلمرو اسکریپت‌نویسی، این به معنای محدود ماندن به قابلیت‌های اولیه‌ی \cmd{sh} (پوسته اصلی \en{Bourne}) و چشم‌پوشی از امکانات مدرن است.
+
+تأمین‌کنندگان نرم‌افزارهای تجاری و انحصاری اغلب از همین شکاف برای توجیه افزونه‌های غیررسمی خود بهره می‌برند و آن‌ها را «نوآوری» می‌نامند؛ در حالی که هدف نهایی، وابسته کردن مشتری به یک پلتفرم خاص (\en{Vendor Lock-in}) است.
+
+در مقابل، ابزارهای پروژه‌ی \en{GNU}، از جمله \en{Bash}، این بن‌بست را در هم شکسته‌اند. این ابزارها با رعایت استانداردهای فنی و در عین حال با دسترس‌پذیری جهانی (\en{Universal Availability})، تعریف تازه‌ای از قابلیت حمل ارائه داده‌اند. امروزه می‌توان \en{Bash} و سایر ابزارهای \en{GNU} را بر روی تقریباً هر سیستم‌عاملی — حتی ویندوز — و بدون هیچ هزینه‌ای نصب کرد. بنابراین می‌توان با اطمینان کامل از تمامی قابلیت‌های پیشرفته‌ی \en{Bash} بهره برد؛ چرا که گستردگی نصب و پایداری آن، خود نوعی استاندارد نوین و «واقعاً قابل‌حمل» را پدید آورده است.
+
+\section{عملگرهای کنترلی: روش جایگزین شاخه‌بندی}
+
+در مفسر \en{Bash}، دو عملگر کنترلی وجود دارند که می‌توانند به عنوان جایگزینی فشرده برای ساختارهای شرطی عمل کنند. عملگرهای \cmd{\&\&} (\en{AND} منطقی) و \cmd{||} (\en{OR} منطقی) در اینجا مشابه عملکردشان در دستور مرکب \cmd{[[ ]]} رفتار می‌کنند، اما برای مدیریت توالی اجرای دستورات به کار می‌روند.
+
+نحو (\en{Syntax}) استفاده از عملگر \cmd{\&\&} به شرح زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+command1 && command2
+\end{lstlisting}
+\end{latin}
+
+و نحو استفاده از عملگر \cmd{||} به صورت زیر می‌باشد:
+
+\begin{latin}
+\begin{lstlisting}
+command1 || command2
+\end{lstlisting}
+\end{latin}
+
+درک دقیق رفتار این عملگرها در اسکریپت‌نویسی حیاتی است: در ترکیب با عملگر \cmd{\&\&}، ابتدا دستور اول اجرا شده و دستور دوم تنها در صورتی اجرا می‌گردد که دستور اول با موفقیت (وضعیت خروج \cmd{0}) خاتمه یافته باشد. در مقابل، در ترکیب با عملگر \cmd{||}، دستور دوم تنها زمانی اجرا می‌شود که دستور اول با شکست (وضعیت خروج غیرصفر) مواجه شده باشد.
+
+در محیط عملیاتی، این قابلیت اجازه می‌دهد تا دستورات را به صورت زنجیره‌ای و هوشمند اجرا کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ mkdir temp && cd temp
+\end{lstlisting}
+\end{latin}
+
+در این مثال، ابتدا دایرکتوری \file{temp} ایجاد می‌شود و تنها در صورت موفقیت این عملیات، دستور تغییر مسیر (\cmd{cd}) اجرا می‌گردد. به همین ترتیب، برای بررسی وجود یک دایرکتوری پیش از ساخت آن، می‌توان از ساختار زیر بهره برد:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ [[ -d temp ]] || mkdir temp
+\end{lstlisting}
+\end{latin}
+
+این دستور وجود دایرکتوری \file{temp} را ارزیابی می‌کند و تنها اگر این ارزیابی با شکست مواجه شود (یعنی دایرکتوری وجود نداشته باشد)، دستور \cmd{mkdir} فراخوانی می‌شود. این الگو برای مدیریت خطا در اسکریپت‌ها بسیار کارآمد است؛ برای مثال:
+
+\begin{latin}
+\begin{lstlisting}
+[ -d temp ] || exit 1
+\end{lstlisting}
+\end{latin}
+
+چنانچه اسکریپت برای ادامه کار به دایرکتوری \file{temp} نیاز داشته باشد و آن را نیابد، بلافاصله با وضعیت خروج \cmd{1} متوقف می‌شود.
+
+همچنین باید توجه داشت که می‌توان به جای دستورات ساده، از دستورات گروهی (\en{Group Commands}) استفاده کرد تا منطق‌های پیچیده‌تری را پیاده‌سازی نمود:
+
+\begin{latin}
+\begin{lstlisting}
+{ true && echo "true"; } && { false || echo "false"; }
+\end{lstlisting}
+\end{latin}
+
+در دستورات گروهی (که با آکولاد \cmd{\{ \}} محصور می‌شوند)، وضعیت خروج کل گروه برابر با وضعیت خروج آخرین دستور اجرا شده در آن گروه خواهد بود.
+
+\section{جمع‌بندی}
+
+ما این فصل را با یک پرسش کلیدی آغاز کردیم: چگونه می‌توان اسکریپت \cmd{sys\_info\_page} را به‌گونه‌ای هوشمند طراحی کرد که سطح دسترسی کاربر برای خواندن دایرکتوری‌های خانگی (\en{home directories}) را تشخیص دهد؟ اکنون با بهره‌گیری از ساختار شرطی \cmd{if} و دستور \cmd{[[ ]]} می‌توانیم این مسئله را با اصلاح تابع \cmd{report\_home\_space} به‌شکل زیر حل کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+report_home_space() {
+    if [[ "$(id -u)" -eq 0 ]]; then
+         cat << _EOF_
+              <h2>Home Space Utilization (All Users)</h2>
+              <pre>$(du -sh /home/*)</pre>
+_EOF_
+    else
+         cat << _EOF_
+              <h2>Home Space Utilization ($USER)</h2>
+              <pre>$(du -sh $HOME)</pre>
+_EOF_
+    fi
+    return
+}
+\end{lstlisting}
+\end{latin}
+
+در این قطعه کد، وضعیت خروج و خروجی استاندارد دستور \cmd{id} مورد ارزیابی قرار می‌گیرد. با استفاده از گزینه \cmd{-u} (مخفف \en{User ID})، این دستور شناسه‌ی عددی کاربر فعلی را بازمی‌گرداند. طبق قراردادهای یونیکس، ابرکاربر (\en{Superuser}) همیشه دارای شناسه‌ی \cmd{0} است و سایر کاربران شناسه‌هایی بزرگ‌تر از صفر دارند. با اتکا به این منطق فنی، اسکریپت قادر است دو نوع گزارش متفاوت تولید کند: یکی با استفاده از امتیازات ریشه (\en{Root}) برای پیمایش تمام دایرکتوری‌ها و دیگری محدود به حریم خصوصی دایرکتوری خانگی خودِ کاربر.
+
+در اینجا موقتاً توسعه‌ی برنامه‌ی \cmd{sys\_info\_page} را متوقف می‌کنیم، اما این پروژه در فصل‌های آتی با قابلیت‌های پیشرفته‌تر بازخواهد گشت. در بخش‌های بعد، به مفاهیم زیرساختی دیگری خواهیم پرداخت که برای تکمیل این ابزار گزارش‌گیری به آن‌ها نیاز خواهیم داشت.
+
+\section{منابع مطالعه تکمیلی}
+
+چندین بخش از صفحات راهنمای (\en{man pages}) مفسر \cmd{bash}، جزئیات فنی عمیق‌تری را پیرامون مباحث مطرح‌شده در این فصل ارائه می‌دهند:
+
+\begin{itemize}
+  \item \en{Lists} (عملگرهای کنترلی \cmd{||} و \cmd{\&\&} را پوشش می‌دهد).
+  \item \en{Compound Commands} (دستورات ترکیبی \cmd{[[ ]]}، \cmd{(( ))} و \cmd{if} را پوشش می‌دهد).
+  \item \en{CONDITIONAL EXPRESSIONS}
+  \item \en{SHELL BUILTIN COMMANDS} (دستور داخلی \cmd{test} را پوشش می‌دهد).
+\end{itemize}
+
+علاوه بر این، ویکی‌پدیا مقاله مناسبی درباره مفهوم شبه‌کد (\en{pseudocode}) دارد:
+
+\begin{latin}
+\url{http://en.wikipedia.org/wiki/Pseudocode}
+\end{latin}

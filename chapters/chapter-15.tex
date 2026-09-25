@@ -1,0 +1,830 @@
+\chapter{زیرساخت‌ها و ابزارهای مدیریت رسانه‌های ذخیره‌سازی}
+
+در فصل‌های پیشین، با داده‌ها در سطح فایل‌ها آشنا شدیم. در این فصل، نگاه خود را گسترش داده و به مدیریت داده‌ها در سطح سخت‌افزار (\en{Device Level}) می‌پردازیم. سیستم‌عامل لینوکس امکانات پیشرفته‌ای را برای مدیریت تجهیزات ذخیره‌سازی (\en{Storage Devices}) فراهم می‌کند. این تجهیزات، دامنه‌ی وسیعی از سخت‌افزارهای فیزیکی مانند هارددیسک‌ها (\en{HDD/SSD})، ذخیره‌سازهای متصل به شبکه (\en{Network-attached Storage} یا \en{NAS})، و همچنین زیرساخت‌های مجازی‌سازی دیسک همچون \en{RAID} (\en{Redundant Array of Independent Disks}) و \en{LVM} (\en{Logical Volume Manager}) را در بر می‌گیرند.
+
+با این وجود، از آنجا که رویکرد اصلی این کتاب بر آموزش مدیریت سیستم متمرکز نیست، از بررسی ابعاد بسیار پیچیده و عمیق این حوزه صرف‌نظر کرده و هدف خود را بر تبیین مفاهیم بنیادین و فرامین کلیدیِ مورد نیاز برای تعامل با رسانه‌های ذخیره‌سازی معطوف می‌کنیم.
+
+به منظور اجرای سناریوهای عملی این فصل، از تجهیزاتی نظیر حافظه‌های فلش \en{USB}، هارددیسک‌های خارجی و دیسک‌های نوری با قابلیت بازنویسی (\en{CD-RW}) در سیستم‌های مجهز به درایور نوری استفاده خواهیم کرد.
+
+در این فصل، ابزارهای عملیاتی زیر را بررسی می‌کنیم:
+
+\begin{itemize}
+  \item \cmd{mount}: جهت اتصال و ادغام یک سیستم فایل در درخت‌واره‌ی دایرکتوری‌ها.
+  \item \cmd{umount}: به منظور قطع اتصال و جداسازی ایمن یک سیستم فایل.
+  \item \cmd{parted}: ابزاری قدرتمند جهت مدیریت و دستکاری جداول پارتیشن.
+  \item \cmd{mkfs}: برای قالب‌بندی و ایجاد سیستم فایل روی پارتیشن‌ها.
+  \item \cmd{fsck}: جهت پایش، بررسی و ترمیم خطاهای احتمالی در سیستم فایل.
+  \item \cmd{dd}: ابزاری سطح پایین برای کپی مستقیم، تبدیل و تهیه‌ی نسخه‌ی پشتیبان از بلوک‌های داده.
+  \item \cmd{genisoimage}: جهت تولید فایل‌های ایمیج با استاندارد \en{ISO 9660}.
+  \item \cmd{wodim}: ابزاری برای رایت و انتقال داده بر روی رسانه‌های نوری.
+  \item \cmd{sha256sum}: به‌منظور محاسبه و اعتبارسنجی چک‌سام (\en{Checksum}) با الگوریتم \en{SHA256} جهت اطمینان از سلامت داده‌ها.
+\end{itemize}
+
+\section{اتصال و انفصال رسانه‌های ذخیره‌سازی}
+
+پیشرفت‌های اخیر در محیط‌های دسکتاپ لینوکس، مدیریت تجهیزات ذخیره‌سازی را برای کاربران عادی بسیار ساده کرده است؛ به‌طوری که در اغلب موارد، صرفاً با اتصال فیزیکی دستگاه به سیستم، شناسایی و آماده‌سازی آن به‌صورت خودکار انجام می‌شود. این در حالی است که در گذشته (برای نمونه، سال ۲۰۰۴)، تمامی این مراحل باید به‌صورت دستی توسط کاربر اجرا می‌شد. در سیستم‌های فاقد محیط گرافیکی، نظیر سرورها، این فرآیند همچنان به‌صورت دستی مدیریت می‌شود؛ چرا که سرورها معمولاً با حجم‌های ذخیره‌سازی بسیار بالا و پیکربندی‌های پیچیده در تعامل هستند.
+
+نخستین گام در مدیریت یک رسانه ذخیره‌سازی، الحاق آن به ساختار درختی سیستم فایل است. این فرآیند که در ادبیات فنی لینوکس «متصل کردن» (\en{Mounting}) نامیده می‌شود، امکان تعامل سیستم‌عامل با دستگاه را فراهم می‌کند. همان‌طور که در فصل دوم اشاره شد، سیستم‌عامل‌های شبه‌یونیکس و لینوکس از یک ساختار درختی واحد برای سیستم فایل پیروی می‌کنند که تمامی دستگاه‌ها در نقاط مختلف به این درخت متصل می‌شوند. این رویکرد با سیستم‌عامل‌هایی نظیر \en{MS-DOS} یا ویندوز که برای هر دستگاه یک ساختار درختی مجزا و مجرد (مانند \cmd{C:} یا \cmd{D:}) در نظر می‌گیرند، تفاوت بنیادین دارد.
+
+فایل پیکربندی \file{/etc/fstab} (مخفف \en{File System Table} یا جدول سیستم فایل)، حاوی فهرستی از تمامی تجهیزات و پارتیشن‌هایی است که باید در زمان بوت شدن سیستم به‌صورت خودکار در درخت‌واره‌ی سیستم فایل متصل (\en{Mount}) شوند.
+
+در ادامه، نمونه‌ای از محتویات فایل \file{/etc/fstab} مربوط به یک توزیع قدیمی فدورا ارائه شده است:
+
+\begin{latin}
+\begin{lstlisting}
+LABEL=/12              /                   ext4    defaults        1 1
+LABEL=/home            /home               ext4    defaults        1 2
+LABEL=/boot            /boot               ext4    defaults        1 2
+tmpfs                  /dev/shm            tmpfs   defaults        0 0
+devpts                 /dev/pts            devpts  gid=5,mode=620  0 0
+sysfs                  /sys                sysfs   defaults        0 0
+proc                   /proc               proc    defaults        0 0
+LABEL=SWAP-sda3        swap                swap    defaults        0 0
+\end{lstlisting}
+\end{latin}
+
+بسیاری از موارد فهرست شده در این مثال، سیستم‌های فایل مجازی (\en{Virtual File Systems}) هستند که خارج از چارچوب بحث فعلی ما قرار می‌گیرند. تمرکز اصلی ما بر سه سطر نخست است که به پارتیشن‌های فیزیکی هارددیسک اشاره دارند:
+
+\begin{latin}
+\begin{lstlisting}
+LABEL=/12              /                   ext4    defaults        1 1
+LABEL=/home            /home               ext4    defaults        1 2
+LABEL=/boot            /boot               ext4    defaults        1 2
+\end{lstlisting}
+\end{latin}
+
+هر سطر در این فایل از شش فیلد مجزا تشکیل شده است که جزئیات فنی آن‌ها در جدول زیر تبیین شده است:
+
+\begin{table}[htbp]
+\centering
+\caption{کالبدشکافی فیلدهای فایل \file{/etc/fstab}}
+\label{tab:fstab-fields}
+\begin{tabularx}{\textwidth}{c l X}
+\toprule
+\textbf{فیلد} & \textbf{عنوان} & \textbf{شرح فنی} \\
+\midrule
+۱ & شناسه‌ی دستگاه (\en{Device}) & این فیلد دستگاه بلوکی (\en{Block Device})، سیستم فایل راه‌دور (\en{Remote File System}) یا امیج سیستم فایل (\en{File System Image}) را مشخص می‌کند. اگرچه به‌طور سنتی از فایل دستگاه (\en{Device File}) (مانند \file{/dev/sda1}) استفاده می‌شد، اما در سیستم‌های مدرن، استفاده از برچسب (\en{LABEL}) یا شناسهٔ یکتای جهانی (\en{UUID}) به‌دلیل پایداری بیشتر توصیه می‌شود، زیرا نام دستگاه‌ها ممکن است بر اساس ترتیب تشخیص سخت‌افزار تغییر کنند. \\
+\addlinespace
+۲ & نقطه‌ی اتصال (\en{Mount Point}) & دایرکتوری مشخصی در درخت‌واره‌ی سیستم فایل که محتویات دستگاه در آنجا در دسترس قرار می‌گیرد. \\
+\addlinespace
+۳ & نوع سیستم فایل (\en{File System Type}) & لینوکس از انواع گسترده‌ای از سیستم‌های فایل پشتیبانی می‌کند؛ از موارد بومی مانند \cmd{ext4} گرفته تا فرمت‌های دیگر نظیر \cmd{vfat} (برای \en{FAT32})، \cmd{ntfs} و \cmd{iso9660} (برای رسانه‌های نوری). \\
+\addlinespace
+۴ & گزینه‌های اتصال (\en{Options}) & تعیین ویژگی‌های عملکردی سیستم فایل؛ برای مثال می‌توان دیسک را به‌صورت «فقط-خواندنی» (\en{read-only}) متصل کرد یا برای امنیت بیشتر در رسانه‌های قابل‌حمل، از اجرای فایل‌های باینری جلوگیری کرد. \\
+\addlinespace
+۵ & اولویت پشتیبان‌گیری (\en{Dump}) & مقداری عددی که اولویت و زمان‌بندی پشتیبان‌گیری از سیستم فایل توسط ابزار \cmd{dump} را مشخص می‌کند. \\
+\addlinespace
+۶ & ترتیب بررسی (\en{Order}) & عددی که ترتیب بررسی سلامت سیستم فایل توسط ابزار \cmd{fsck} را در زمان بوت تعیین می‌کند. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{پایش سیستم‌های فایل متصل (Mounted)}
+
+فرمان \cmd{mount} ابزار اصلی جهت اتصال سیستم‌های فایل به درخت‌واره‌ی دایرکتوری‌هاست. چنانچه این دستور بدون هیچ‌گونه آرگومانی اجرا شود، فهرستی از تمامی سیستم‌های فایلی که در حال حاضر به سیستم متصل و فعال هستند، نمایش داده می‌شود:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ mount
+/dev/sda2 on / type ext4 (rw)
+proc on /proc type proc (rw)
+sysfs on /sys type sysfs (rw)
+devpts on /dev/pts type devpts (rw,gid=5,mode=620)
+/dev/sda5 on /home type ext4 (rw)
+/dev/sda1 on /boot type ext4 (rw)
+tmpfs on /dev/shm type tmpfs (rw)
+none on /proc/sys/fs/binfmt_misc type binfmt_misc (rw)
+sunrpc on /var/lib/nfs/rpc_pipefs type rpc_pipefs (rw)
+fusectl on /sys/fs/fuse/connections type fusectl (rw)
+/dev/sdd1 on /media/disk type vfat (rw,nosuid,nodev,noatime,
+uhelper=hal,uid=500,utf8,shortname=lower)
+twin4:/musicbox on /misc/musicbox type nfs4 (rw,addr=192.168.1.4)
+\end{lstlisting}
+\end{latin}
+
+\begin{note}
+\textbf{نکته:} کاربران توزیع اوبونتو ممکن است با فهرستی مواجه شوند که به دلیل حضور دستگاه‌های مجازی «\en{loop}» (ایجاد شده توسط بسته‌های \en{Snap})، بسیار شلوغ و متراکم به نظر می‌رسد. جهت پالایش این خروجی و دستیابی به فهرستی منظم‌تر، می‌توانید از دستور زیر استفاده کنید:
+\begin{latin}
+\begin{lstlisting}
+grep -v snap
+\end{lstlisting}
+\end{latin}
+\end{note}
+
+الگوی ساختاری این فهرست بدین گونه است: دستگاه در نقطه‌ی اتصال، از نوعِ سیستم فایل، همراه با پارامترهای عملیاتی در پرانتز گزارش می‌شود. به‌عنوان نمونه، سطر نخست گزارش می‌دهد که دستگاه \file{/dev/sda2} به‌عنوان «سیستم فایل ریشه» (\en{Root File System}) بارگذاری شده، از نوع \cmd{ext4} بوده و دارای مجوزهای خواندن و نوشتن (گزینه‌ی \cmd{rw}) است. همچنین در انتهای این فهرست، دو مدخل قابل‌تأمل مشاهده می‌شود: نخست، یک کارت حافظه با ظرفیت ۲ گیگابایت که از طریق کارت‌خوان در مسیر \file{/media/disk/} متصل شده است و دوم، یک درایو تحت شبکه (\en{Network Drive}) که در مسیر \file{/misc/musicbox/} در دسترس قرار دارد.
+
+در نخستین گام عملی، یک حافظه‌ی فلش با ظرفیت ۴ گیگابایت را مورد آزمایش قرار می‌دهیم. پیش از اتصال فیزیکی دستگاه، وضعیت نقاط اتصال را در یک سیستم اوبونتو ۲۲.۰۴ بررسی می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ mount | grep /dev/sd
+/dev/sda2 on / type ext4 (rw,relatime,errors=remount-ro)
+/dev/sda1 on /boot/efi type vfat (rw,relatime,fmask=0077,dmask=0077,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro)
+/dev/sdb1 on /home type ext4 (rw,relatime)
+\end{lstlisting}
+\end{latin}
+
+خروجی فوق با استفاده از ابزار \cmd{grep} پالایش شده است تا صرفاً دستگاه‌های منطبق با الگوی \file{/dev/sd} جهت وضوح بیشتر نمایش داده شوند. تحلیل این خروجی نشان می‌دهد که سیستم میزبان دارای دو هارددیسک فیزیکی با شناسه‌های \file{/dev/sda} و \file{/dev/sdb} است. دیسک نخست شامل دو پارتیشن (\file{/dev/sda1} و \file{/dev/sda2}) و دیسک دوم تنها شامل یک پارتیشن (\file{/dev/sdb1}) است.
+
+مطابق با رفتار استاندارد توزیع‌های مدرن، لینوکس پس از اتصال حافظه‌ی فلش، به‌طور خودکار نسبت به بارگذاری (\en{Mount}) آن اقدام می‌کند. پس از اتصال، وضعیت خروجی به شرح زیر تغییر می‌یابد:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ mount | grep /dev/sd
+/dev/sda2 on / type ext4 (rw,relatime,errors=remount-ro)
+/dev/sda1 on /boot/efi type vfat (rw,relatime,fmask=0077,dmask=0077,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro)
+/dev/sdb1 on /home type ext4 (rw,relatime)
+/dev/sdc on /media/me/C911-C314 type vfat (rw,nosuid,nodev,relatime,uid=1000,gid=1000,fmask=0022,dmask=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,showexec,utf8,flush,errors=remount-ro)
+\end{lstlisting}
+\end{latin}
+
+مشاهده می‌شود که یک مدخل جدید به فهرست اضافه شده است؛ حافظه‌ی فلش (که در این سیستم شناسه‌ی \file{/dev/sdc} را به خود اختصاص داده) در مسیر \file{/media/me/C911-C314/} متصل شده و دارای سیستم فایل \cmd{vfat} (فرمت \en{FAT32} سازگار با ویندوز) است. تشخیص دقیق نام دستگاه در این مرحله برای تداوم آزمایش‌ها حیاتی است.
+
+\begin{warning}
+\textbf{هشدار امنیتی:} در اجرای فرامین بعدی، الزامی است که شناسه‌ی دقیق دستگاه را در سیستمِ خود جایگزین کنید. اکیداً از به‌کاربردن نام‌های ذکر شده در این متن (مانند \file{/dev/sdc}) بدون انطباق با واقعیت سیستم خود پرهیز کنید، زیرا اشتباه در شناسایی دیسک می‌تواند منجر به نابودی دائمی داده‌ها شود.
+\end{warning}
+
+پس از شناسایی دقیق نام دستگاه، فرآیند جداسازی و اتصال آن را در نقطه‌ای دیگر از ساختار درختی سیستم فایل آغاز می‌کنیم. ابتدا با استفاده از فرامین ارتقای سطح دسترسی (مانند \cmd{sudo})، به حساب کاربری ریشه (\en{Root}) وارد شده و با دستور \cmd{umount} (دقت کنید که حرف «\en{n}» در این دستور وجود ندارد)، اتصال دستگاه را قطع می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ sudo -i
+[sudo] password for me:
+[root@linuxbox ~]# umount /dev/sdc
+\end{lstlisting}
+\end{latin}
+
+گام بعدی، ایجاد یک «نقطه اتصال» (\en{Mount Point}) جدید است. نقطه اتصال در واقع یک دایرکتوری معمولی در سلسله‌مراتب سیستم فایل است و ویژگی فیزیکی خاصی ندارد. لزومی به خالی بودن این دایرکتوری نیست، اما در صورت متصل کردن دستگاه روی یک دایرکتوری غیرخالی، محتویات پیشین آن تا زمان جداسازی دستگاه (\en{Unmount}) پنهان خواهند ماند.
+
+برای این آزمایش، یک دایرکتوری جدید ایجاد می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+[root@linuxbox ~]# mkdir /mnt/flash
+\end{lstlisting}
+\end{latin}
+
+در نهایت، حافظه فلش را در محل جدید مستقر می‌کنیم. در این مرحله از گزینه \cmd{-t} برای تصریح نوع سیستم فایل (در اینجا \cmd{vfat}) استفاده می‌شود:
+
+\begin{latin}
+\begin{lstlisting}
+[root@linuxbox ~]# mount -t vfat /dev/sdc /mnt/flash
+\end{lstlisting}
+\end{latin}
+
+اکنون محتویات حافظه از طریق مسیر جدید قابل دسترسی است:
+
+\begin{latin}
+\begin{lstlisting}
+[root@linuxbox ~]# cd /mnt/flash
+[root@linuxbox cdrom]# ls
+\end{lstlisting}
+\end{latin}
+
+رفتار سیستم را هنگام تلاش برای جداسازی دستگاه در وضعیت فعلی بررسی کنید:
+
+\begin{latin}
+\begin{lstlisting}
+[root@linuxbox cdrom]# umount /dev/sdc
+umount: /mnt/flash: device is busy
+\end{lstlisting}
+\end{latin}
+
+علت بروز این خطا آن است که سیستم‌عامل اجازه جداسازی دستگاهی را که توسط یک کاربر یا فرآیند در حال استفاده (\en{In Use}) باشد، نمی‌دهد. در این سناریو، چون دایرکتوری کاری (\en{Working Directory}) پوسته روی نقطه اتصال تنظیم شده، دستگاه در وضعیت «مشغول» (\en{Busy}) قرار دارد. برای رفع این مشکل، کافی است از مسیر مذکور خارج شوید:
+
+\begin{latin}
+\begin{lstlisting}
+[root@linuxbox cdrom]# cd
+[root@linuxbox ~]# umount /dev/sdc
+\end{lstlisting}
+\end{latin}
+
+با خروج از دایرکتوری، فرآیند جداسازی با موفقیت به پایان می‌رسد.
+
+\section{ضرورت عملیات انفصال (Unmount) و جایگاه بافرینگ}
+
+چنانچه خروجی دستور \cmd{free} را برای تحلیل وضعیت حافظه بررسی کنید، با پارامتری تحت عنوان \cmd{buffers} مواجه خواهید شد. معماری سیستم‌های کامپیوتری بر پایه‌ی بیشینه‌سازی سرعت طراحی شده است و یکی از جدی‌ترین گلوگاه‌های عملیاتی، مواجهه با سخت‌افزارهای کُند است. چاپگرها مصداق بارز این موضوع هستند؛ حتی پیشرفته‌ترین چاپگرها نیز از منظر پردازنده، تجهیزاتی بسیار کُند تلقی می‌شوند. در دوران نخستین ظهور کامپیوترهای شخصی و پیش از تکامل قابلیت‌های چندوظیفگی (\en{Multi-tasking})، توقف کامل سیستم هنگام انجام عملیات چاپ، یک معضل جدی بود؛ بدین معنا که کاربر تا پایان فرآیند ارسال داده‌ها با نرخ پذیرش چاپگر، امکان تعامل با نرم‌افزارهای دیگر را نداشت.
+
+این چالش با ابداع بافر چاپگر (\en{Printer Buffer}) مرتفع شد؛ قطعه‌ای مجهز به حافظه \en{RAM} که میان کامپیوتر و چاپگر قرار می‌گرفت. با وجود این واسط، کامپیوتر داده‌ها را با سرعت بسیار بالای \en{RAM} به بافر منتقل کرده و بلافاصله به وضعیت عملیاتی بازمی‌گشت، در حالی که بافر وظیفه‌ی انتقال تدریجی داده‌ها را به چاپگر بر عهده می‌گرفت.
+
+امروزه استراتژی بافرینگ (\en{Buffering}) به‌منظور بهینه‌سازی عملکرد، در تمامی سطوح سیستم‌عامل به کار گرفته می‌شود تا تعاملات ناپیوسته با هارددیسک‌ها و سایر رسانه‌های ذخیره‌سازی، موجب افت کارایی کل سیستم نشود. سیستم‌عامل‌ها داده‌های خوانده شده یا آماده‌ی نوشتن را تا حد امکان در حافظه‌ی موقت (\en{RAM}) نگهداری می‌کنند و تنها در زمان‌های بهینه با سخت‌افزار وارد تعامل می‌شوند. به همین سبب، در سیستم‌های لینوکسی مشاهده می‌شود که با افزایش زمانِ کارکرد، حجم حافظه‌ی اصلی (\en{RAM}) اشغال‌شده رو به افزایش است؛ این پدیده نشان‌دهنده‌ی نشت حافظه نیست، بلکه بیانگر مدیریت هوشمندانه‌ی لینوکس در تخصیص تمامی ظرفیت‌های بلااستفاده‌ی \en{RAM} به امر بافرینگ (\en{Buffer Cache}) جهت ارتقای سرعت پاسخ‌گویی سیستم است.
+
+این سازوکارِ بافرینگ موجب می‌شود عملیات نوشتن بر روی رسانه‌های ذخیره‌سازی با سرعتی بسیار بالا به‌نظر برسد؛ چرا که ثبت نهایی داده‌ها بر روی سخت‌افزار فیزیکی به زمان دیگری موکول شده است. در این بازه‌ی زمانی، داده‌ها در حافظه‌ی موقت (\en{RAM}) انباشته می‌شوند و سیستم‌عامل در فواصل زمانی مشخص، این اطلاعات را به‌صورت دسته‌ای (\en{Batch}) بر روی دستگاه فیزیکی بازنویسی می‌کند.
+
+فرآیند انفصال ایمن (\en{Unmount})، سیستم‌عامل را ملزم می‌کند تا تمامی داده‌های باقی‌مانده در بافر را به‌طور کامل بر روی دستگاه تخلیه کند (عملیات \en{Flush}). اگر رسانه‌ی ذخیره‌سازی بدون طی کردن این مرحله از سیستم جدا شود، احتمال دارد بخشی از داده‌ها هرگز به مقصد نرسیده باشند. در بدترین سناریو، این داده‌های منتقل‌نشده ممکن است شامل فراداده‌ها (\en{Metadata}) باشند که نقص در آن‌ها منجر به خرابی ساختاری (\en{File System Corruption}) می‌شود؛ یکی از بحرانی‌ترین خطاهایی که پایداری داده‌ها را در یک کامپیوتر تهدید می‌کند.
+
+\section{شناسایی شناسه‌ی فنی دستگاه‌ها}
+
+در گذشته، شناسایی نام فنی یک دستگاه (\en{Device Name}) فرآیند پیچیده‌ای نبود؛ چرا که پیکربندی سخت‌افزاری ثابت بود و تغییر نمی‌کرد. سیستم‌های شبه‌یونیکس نیز بر همین اساس طراحی شده بودند. در دوران ابتدایی توسعه‌ی یونیکس، مفهوم «تعویض درایو دیسک» به‌معنای جابه‌جایی تجهیزاتی به ابعاد یک ماشین لباس‌شویی با استفاده از لیفتراک بود! اما امروزه، معماری سخت‌افزاری دسکتاپ‌ها بسیار پویا شده و لینوکس نیز به تناسب آن، انعطاف‌پذیری بسیار بالاتری نسبت به نسخه‌های پیشین خود پیدا کرده است.
+
+در مثال‌های پیشین، ما از قابلیت «اتصال خودکار» (\en{Automount}) در محیط‌های دسکتاپ مدرن برای یافتن نام دستگاه بهره بردیم. اما در مدیریت سرورها یا محیط‌های فاقد رابط گرافیکی که این فرآیند به‌صورت خودکار انجام نمی‌شود، چگونه باید شناسه‌ی دقیق یک دستگاه را استخراج کرد؟
+
+ابتدا ضروری است درک کنیم که هسته‌ی لینوکس بر چه اساسی نام‌گذاری تجهیزات ذخیره‌سازی را مدیریت می‌کند. چنانچه محتویات دایرکتوری \file{/dev} (محل استقرار گره‌های دستگاه) را فهرست کنید، با حجم انبوهی از فایل‌های دستگاه مواجه خواهید شد:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ ls /dev
+\end{lstlisting}
+\end{latin}
+
+بررسی این فهرست، الگوهای مشخصی از نام‌گذاری را آشکار می‌سازد. جدول زیر به تبیین دقیق این الگوها و زیرساخت‌های مرتبط با آن‌ها می‌پردازد:
+
+\begin{table}[htbp]
+\centering
+\caption{قراردادهای نام‌گذاری رسانه‌های ذخیره‌سازی در لینوکس}
+\label{tab:device-naming}
+\begin{tabularx}{\textwidth}{l l X}
+\toprule
+\textbf{الگو} & \textbf{نوع دستگاه} & \textbf{شرح فنی} \\
+\midrule
+\file{/dev/fd*} & درایوهای فلاپی (\en{Floppy Drives}) & مربوط به رسانه‌های فلاپی‌دیسک که امروزه عملاً منسوخ شده‌اند. اولین درایو فلاپی با نام \file{/dev/fd0} و دومین درایو با \file{/dev/fd1} شناسایی می‌شود. \\
+\addlinespace
+\file{/dev/hd*} & دیسک‌های \en{IDE} یا \en{PATA} & مورد استفاده در سیستم‌های قدیمی. در معماری \en{IDE}، هر کانال دارای دو وضعیت مستر (\en{Master}) و اسلیو (\en{Slave}) بود؛ به‌طوری‌که \file{/dev/hda} به دستگاه مستر در کانال نخست و \file{/dev/hdb} به دستگاه اسلیوِ همان کانال اشاره داشت. اعداد انتهایی نیز بیانگر شماره‌ی پارتیشن (\en{Partition Number}) هستند (مثلاً \file{/dev/hda1}). این قرارداد نام‌گذاری در هسته‌های مدرن لینوکس منسوخ شده و دستگاه‌های \en{IDE} نیز از طریق زیرسیستم \en{SCSI} مدیریت می‌شوند. \\
+\addlinespace
+\file{/dev/lp*} & چاپگرها (\en{Line Printers}) & درگاه‌های موازی (\en{Parallel Ports}) جهت اتصال چاپگرهای قدیمی. \\
+\addlinespace
+\file{/dev/sd*} & دیسک‌های \en{SCSI} & در هسته‌های مدرن لینوکس، تمامی دستگاه‌های ذخیره‌سازیِ انبوه (\en{Mass Storage})—شامل دیسک‌های \en{SATA}، حافظه‌های فلش (\en{Flash Drives}) و دستگاه‌های ذخیره‌سازیِ \en{USB}—از طریق زیرسیستم \en{SCSI} (\en{subsystem}) مدیریت می‌شوند. حرف پایانی (مانند \cmd{a}، \cmd{b}، \cmd{c}) بیانگر ترتیب شناساییِ دستگاه توسط هسته است و اعداد انتهایی نیز مشابه دیسک‌های \en{IDE}، شماره‌ی پارتیشن را نشان می‌دهند (مثلاً \file{/dev/sda1}). \\
+\addlinespace
+\file{/dev/sr*} & درایوهای نوری (\en{Optical Drives}) & مربوط به درایوهای \en{CD/DVD} که این‌ها نیز از طریق زیرسیستم \en{SCSI} مدیریت می‌شوند. \\
+\addlinespace
+\file{/dev/nvme*} & دیسک‌های \en{NVMe} & قرارداد نام‌گذاریِ نوین‌تر، مخصوص حافظه‌های \en{SSD} متصل از طریق گذرگاه \en{PCIe}؛ با فرمتی متفاوت مانند \file{/dev/nvme0n1} (که در آن \cmd{n1} بیانگر شماره‌ی فضای نام یا \en{Namespace} است) و پسوند \cmd{p} برای شماره‌ی پارتیشن (مثلاً \file{/dev/nvme0n1p1}). \\
+\addlinespace
+\file{/dev/vd*} & دیسک‌های مجازی (\en{Virtio Disks}) & مورد استفاده در محیط‌های مجازی‌سازی‌شده (\en{Virtualized Environments}) نظیر \en{KVM}، که در آن‌ها دیسک‌های مجازی از طریق درایور \en{Virtio} به میهمان (\en{Guest}) معرفی می‌شوند. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+علاوه بر این موارد، سیستم‌عامل به‌منظور سهولت در دسترسی، پیوندهای نمادین (\en{Symbolic Links}) متعددی نظیر \file{/dev/cdrom}، \file{/dev/dvd} یا \file{/dev/floppy} ایجاد می‌کند که مستقیماً به فایل دستگاه اصلی اشاره دارند.
+
+در سیستم‌هایی که از قابلیت اتصال خودکار (\en{Auto-mount}) پشتیبانی نمی‌کنند، برای یافتن نام فنی دستگاه می‌توانید وقایع سیستمی را در لحظه‌ی اتصال سخت‌افزار رصد کنید. برای این کار، یک نمای بلادرنگ (\en{Real-time}) از گزارش‌های سیستم ایجاد کنید. در توزیع‌های مبتنی بر دبیان (مانند اوبونتو)، این گزارش‌ها معمولاً در \file{/var/log/syslog} و در توزیع‌های مبتنی بر ردهت (مانند فدورا)، در \file{/var/log/messages} ذخیره می‌شوند. با استفاده از دستور \cmd{tail -f} می‌توانید این فایل‌ها را به‌صورت لحظه‌ای دنبال کنید تا پیام‌های کرنل را هنگام اتصال دستگاه مشاهده نمایید. توجه داشته باشید که اجرای این دستورات به امتیازات مدیریتی (\en{root}) نیاز دارد:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ sudo tail -f /var/log/syslog
+\end{lstlisting}
+\end{latin}
+
+در توزیع‌های مدرن مبتنی بر \en{systemd}، استفاده از ابزار \cmd{journalctl} برای پایش گزارش‌های سیستم (\en{System Logs}) توصیه می‌شود:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ sudo journalctl -f
+\end{lstlisting}
+\end{latin}
+
+پس از اجرای دستور، خروجی در چند خط آخر متوقف می‌شود. در این مرحله، رسانه‌ی خود را متصل کنید. بلافاصله پس از اتصال، هسته‌ی لینوکس (\en{Kernel}) دستگاه را شناسایی کرده و فرآیند بررسی (\en{Probe}) را آغاز می‌کند که خروجی مشابه زیر را در بر خواهد داشت:
+
+\begin{latin}
+\begin{lstlisting}
+Jul 25 13:15:07 ratel mtp-probe[21318]: checking bus 3, device 8: "/sys/devices/pci0000:00/0000:00:14.0/usb3/3-6"
+Jul 25 13:15:07 ratel mtp-probe[21318]: bus: 3, device: 8 was not an MTP device
+Jul 25 13:15:07 ratel mtp-probe[21321]: checking bus 3, device 8: "/sys/devices/pci0000:00/0000:00:14.0/usb3/3-6"
+Jul 25 13:15:07 ratel mtp-probe[21321]: bus: 3, device: 8 was not an MTP device
+Jul 25 13:15:08 ratel kernel: scsi 6:0:0:0: Direct-Access     General UDisk        5.00 PQ: 0 ANSI: 2
+Jul 25 13:15:08 ratel kernel: sd 6:0:0:0: Attached scsi generic sg3 type 0
+Jul 25 13:15:08 ratel kernel: sd 6:0:0:0: [sdc] 7864320 512-byte logical blocks: (4.03 GB/3.75 GiB)
+Jul 25 13:15:08 ratel kernel: sd 6:0:0:0: [sdc] Write Protect is off
+Jul 25 13:15:08 ratel kernel: sd 6:0:0:0: [sdc] Mode Sense: 0b 00 00 08
+Jul 25 13:15:08 ratel kernel: sd 6:0:0:0: [sdc] No Caching mode page found
+Jul 25 13:15:08 ratel kernel: sd 6:0:0:0: [sdc] Assuming drive cache: write through
+Jul 25 13:15:08 ratel kernel: sdc:
+Jul 25 13:15:08 ratel kernel: sd 6:0:0:0: [sdc] Attached SCSI removable disk
+\end{lstlisting}
+\end{latin}
+
+پس از توقف فرآیند نمایش پیام‌ها، با فشردن کلید ترکیبی \cmd{Ctrl+C} به محیط خط فرمان بازگردید. در خروجی به‌دست‌آمده، آنچه بیش از همه حائز اهمیت است، تکرار شناسه‌ی \cmd{[sdc]} در پیام‌های سیستمی است که دقیقاً با الگوی نام‌گذاری دیسک‌های \en{SCSI} در لینوکس مطابقت دارد. با تکیه بر این دانش، دو سطر زیر به‌وضوح هویت دستگاه متصل‌شده را آشکار می‌کنند:
+
+\begin{latin}
+\begin{lstlisting}
+Jul 25 13:15:08 ratel kernel: sdc:
+Jul 25 13:15:08 ratel kernel: sd 6:0:0:0: [sdc] Attached SCSI
+removable disk removable disk
+\end{lstlisting}
+\end{latin}
+
+\begin{note}
+\textbf{نکته:} بهره‌گیری از دستوراتی نظیر \cmd{tail -f /var/log/syslog} یا \cmd{journalctl -f} روشی بسیار کارآمد برای پایش فعالیت‌های سیستم و رخدادهای هسته (\en{Kernel Events}) در لحظه است. این رویکرد به شما اجازه می‌دهد تا کوچک‌ترین تغییرات سخت‌افزاری یا خطاهای سیستمی را بلافاصله پس از وقوع، رصد و تحلیل کنید.
+\end{note}
+
+راه دیگری نیز برای شناسایی نام فنی دستگاه‌ها در دسترس است (در لینوکس همواره بیش از یک مسیر برای دستیابی به هدف وجود دارد!). استفاده از دستور \cmd{lsblk} روشی بسیار کارآمد است؛ این ابزار تمامی دستگاه‌های بلوکی (\en{Block Devices}) متصل به سیستم را، اعم از آنکه در ساختار درختی سیستم فایل متصل (\en{Mount}) شده باشند یا خیر، فهرست می‌کند.
+
+فرض کنید در ابتدا حافظه‌ی فلش را از سیستم جدا کرده‌اید؛ در این حالت خروجی دستور جهت مشاهده‌ی پیکربندی دیسک‌های ثابت به شرح زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ lsblk
+NAME    MAJ:MIN RM    SIZE RO TYPE MOUNTPOINTS
+sda       8:0    0  111.8G  0 disk
+├─sda1    8:1    0    976M  0 part /boot/efi
+|
+└─sda3    8:3    0   14.9G  0 part [SWAP]
+sdb       8:16   0  931.5G  0 disk
+├─sdb1    8:17   0  922.2G  0 part /home
+└─sdb2    8:18   0    9.3G  0 part
+sr0      11:0    1   1024M  0 rom
+\end{lstlisting}
+\end{latin}
+
+در گام بعد، پس از اتصال مجدد حافظه‌ی فلش، فرمان \cmd{lsblk} را تکرار می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ lsblk
+NAME    MAJ:MIN RM    SIZE RO TYPE MOUNTPOINTS
+sda       8:0    0  111.8G  0 disk
+├─sda1    8:1    0    976M  0 part /boot/efi
+|
+└─sda3    8:3    0   14.9G  0 part [SWAP]
+sdb       8:16   0  931.5G  0 disk
+├─sdb1    8:17   0  922.2G  0 part /home
+└─sdb2    8:18   0    9.3G  0 part
+sdc       8:32   1    3.8G  0 disk
+sr0      11:0    1   1024M  0 rom
+\end{lstlisting}
+\end{latin}
+
+با مقایسه‌ی دو خروجی، مشاهده می‌شود که ورودی جدیدی تحت عنوان \cmd{sdc} با ظرفیت ۳.۸ گیگابایت به فهرست افزوده شده است. شایان ذکر است که این شناسه‌ی فنی (\en{Identifier}) تا زمانی که اتصال فیزیکی برقرار باشد و سیستم بازراه‌اندازی (\en{Reboot}) نشود، معتبر و ثابت باقی خواهد ماند.
+
+پس از احراز نام فنی دستگاه، می‌توانیم فرآیند متصل کردن (\en{Mount}) حافظه‌ی فلش را آغاز کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ sudo mount /dev/sdc /mnt/flash
+[me@linuxbox ~]$ df
+Filesystem    1K-blocks      Used Available Use% Mounted on
+tmpfs           1624184      2144   1622040   1% /run
+/dev/sda2      98430196  45133696  48250332  49% /
+tmpfs           8120908         0   8120908   0% /dev/shm
+tmpfs              5120         4      5116   1% /run/lock
+/dev/sda1        997456      6220    991236   1% /boot/efi
+/dev/sdb1     950690656 585574576 316749944  65% /home
+tmpfs           1624180        80   1624100   1% /run/user/120
+tmpfs           1624180       192   1623988   1% /run/user/1000
+/dev/sdc        3924444         4   3924440   1% /mnt/flash
+\end{lstlisting}
+\end{latin}
+
+در سطر پایانی خروجی، مشاهده می‌شود که دستگاه \file{/dev/sdc} با موفقیت در مسیر \file{/mnt/flash/} مستقر شده است. ستون‌های این گزارش به ترتیب ظرفیت کل (بر حسب بلوک‌های یک کیلوبایتی)، فضای مصرفی، فضای در دسترس و درصد بهره‌برداری را نمایش می‌دهند.
+
+\section{پیکربندی و ایجاد سیستم‌های فایل جدید}
+
+فرض کنید یک هارددیسک خارجی با درگاه \en{USB} در اختیار دارید که در حال حاضر تنها از یک پارتیشن با سیستم فایل \en{FAT32} بهره می‌برد. هدف ما این است که این درایو را به دو بخش مجزا تفکیک کنیم: یک پارتیشن با سیستم فایل بومی لینوکس (\cmd{ext4}) و پارتیشن دیگر با فرمت \cmd{ntfs} جهت سازگاری با سیستم‌عامل ویندوز. تحقق این امر مستلزم طی کردن دو مرحله‌ی اساسی است:
+
+\begin{enumerate}
+  \item بازطراحی ساختار پارتیشن‌بندی دیسک (\en{Partition Table}).
+  \item قالب‌بندی (\en{Formatting}) و ایجاد سیستم‌های فایل جدید در هر یک از پارتیشن‌ها.
+\end{enumerate}
+
+\begin{warning}
+\textbf{هشدار:} در این تمرین، درایو هدف به‌طور کامل فرمت خواهد شد. اکیداً توصیه می‌شود از درایوی استفاده کنید که فاقد داده‌های ارزشمند باشد، چرا که این فرآیند منجر به حذف دائمی تمامی اطلاعات موجود خواهد شد.
+\end{warning}
+
+مجدداً تأکید می‌شود که پیش از اجرا، از صحت نام فنی دستگاه (\en{Device Name}) در سیستم خود اطمینان حاصل کنید و هرگز صرفاً به نام‌های ذکر شده در متن اکتفا نکنید. عدم دقت در شناسایی صحیح درایو می‌تواند منجر به حذف ناخواسته‌ی داده‌ها از هارددیسک اصلی یا سایر حافظه‌های متصل به سیستم شود.
+
+\subsection{مدیریت پارتیشن‌ها با ابزار parted}
+
+\cmd{parted} یکی از راهکارهای قدرتمند (در دو نسخه‌ی مبتنی بر خط فرمان و رابط گرافیکی) جهت تعامل مستقیم با تجهیزات ذخیره‌سازی، نظیر هارددیسک‌ها و حافظه‌های فلش، در سطوح پایین سیستمی (\en{Low-level}) است. برای شروع، ابتدا درایو مورد نظر را متصل نموده و با استفاده از دستور \cmd{lsblk} شناسه‌ی فنی آن را استخراج می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ lsblk
+NAME    MAJ:MIN RM     SIZE RO TYPE MOUNTPOINTS
+sda       8:0    0   111.8G  0 disk
+├─sda1    8:1    0     976M  0 part /boot/efi
+|
+└─sda3    8:3    0    14.9G  0 part [SWAP]
+sdb       8:16   0   931.5G  0 disk
+├─sdb1    8:17   0   922.2G  0 part /home
+└─sdb2    8:18   0     9.3G  0 part
+sdd       8:32   0   232.9G  0 disk
+└─sdd1    8:33   0   232.9G  0 part /media/me/USB_DISK
+sr0      11:0    1    1024M  0 rom
+\end{lstlisting}
+\end{latin}
+
+مطابق با خروجی فوق، هارددیسک خارجی شناسایی شده و تحت عنوان \file{/dev/sdd} در سیستم نگاشت شده است. همچنین مشاهده می‌شود که این دستگاه در حال حاضر دارای یک پارتیشن فعال به نام \file{/dev/sdd1} است.
+
+با استفاده از ابزار \cmd{parted} امکان ویرایش، حذف و ایجاد پارتیشن‌ها فراهم می‌شود. جهت کار بر روی این هارددیسک، ابتدا لازم است در صورت اتصال فعال، آن را از حالت متصل خارج (\en{Unmount}) کرده و سپس برنامه را مطابق دستور زیر اجرا کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ sudo umount /dev/sdd1
+[me@linuxbox ~]$ sudo parted /dev/sdd
+\end{lstlisting}
+\end{latin}
+
+در نظر داشته باشید که هنگام فراخوانی این ابزار، باید شناسه‌ی کلِ دستگاه (\en{Block Device}) را مشخص کنید و نه صرفاً شماره‌ی یک پارتیشن خاص را. پس از اجرای دستور، محیط تعاملی برنامه به‌صورت زیر ظاهر می‌گردد:
+
+\begin{latin}
+\begin{lstlisting}
+GNU Parted 3.4
+Using /dev/sdd
+Welcome to GNU Parted! Type 'help' to view a list of commands.
+(parted)
+\end{lstlisting}
+\end{latin}
+
+با وارد کردن دستور \cmd{help} در محیط تعاملی، فهرستی از دستورات عملیاتی در دسترس نمایش داده می‌شود:
+
+\begin{latin}
+\begin{lstlisting}
+(parted) help
+  align-check TYPE N                        check partition N for
+                                            TYPE(min|opt) alignment
+  help [COMMAND]                            print general help, or
+                                            help on COMMAND
+  mklabel,mktable LABEL-TYPE                create a new disklabel
+                                            (partition table)
+  mkpart PART-TYPE [FS-TYPE] START END      make a partition
+  name NUMBER NAME                          name partition NUMBER as
+                                            NAME
+  print [devices|free|list,all|NUMBER]      display the partition
+                                            table, available devices,
+                                            free space, all found
+                                            partitions, or a
+                                            particular partition
+  quit                                      exit program
+  rescue START END                          rescue a lost partition
+                                            near START and END
+  resizepart NUMBER END                     resize partition NUMBER
+  rm NUMBER                                 delete partition NUMBER
+  select DEVICE                             choose the device to edit
+  disk_set FLAG STATE                       change the FLAG on
+                                            selected device
+  disk_toggle [FLAG]                        toggle the state of FLAG
+                                            on selected device
+  set NUMBER FLAG STATE                     change the FLAG on
+                                            partition NUMBER
+  toggle [NUMBER [FLAG]]                    toggle the state of FLAG
+                                            on partition NUMBER
+  unit UNIT                                 set the default unit to
+                                            UNIT
+  version                                   display the version number
+                                            and copyright information
+                                            of GNU Parted
+\end{lstlisting}
+\end{latin}
+
+نخستین اقدام، بررسی پیکربندی و ساختار پارتیشن‌بندی فعلی دیسک است. این عملیات با استفاده از دستور \cmd{print} جهت فراخوانی جدول پارتیشن (\en{Partition Table}) انجام می‌پذیرد:
+
+\begin{latin}
+\begin{lstlisting}
+(parted) print
+Model: WDC WD25 00BEVT-00A0RT0 (scsi)
+Disk /dev/sdd: 250GB
+Sector size (logical/physical): 512B/512B
+Partition Table: msdos
+Disk Flags:
+
+Number  Start   End     Size    Type     File system  Flags
+ 1      1049kB  250GB   250GB   primary  fat32        lba
+\end{lstlisting}
+\end{latin}
+
+خروجی فوق نشان می‌دهد که دیسک مورد نظر دارای ظرفیت ۲۵۰ گیگابایت بوده و در حال حاضر تنها از یک پارتیشن اصلی (\en{Primary}) با سیستم فایل \cmd{fat32} بهره می‌برد که کل فضای دیسک را به خود اختصاص داده است.
+
+به منظور پیکربندی پارتیشن‌های جدید، ابتدا باید پارتیشن موجود را از روی دیسک حذف کنیم. این عملیات به سادگی و با استفاده از دستور \cmd{rm} قابل انجام است:
+
+\begin{latin}
+\begin{lstlisting}
+(parted) rm 1
+(parted) print
+Model: WDC WD25 00BEVT-00A0RT0 (scsi)
+Disk /dev/sdd: 250GB
+Sector size (logical/physical): 512B/512B
+Partition Table: msdos
+Disk Flags:
+
+Number  Start  End  Size  Type     File system  Flags
+\end{lstlisting}
+\end{latin}
+
+در این مرحله، شماره پارتیشن مورد نظر برای حذف را مشخص کرده و سپس با بازخوانی جدول پارتیشن، از حذف قطعی آن اطمینان حاصل می‌کنیم.
+
+در گام بعد، فرآیند ایجاد پارتیشن‌های جدید را با استفاده از دستور \cmd{mkpart} آغاز می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+(parted) mkpart
+Partition type?  primary/extended? primary
+File system type?  [ext2]? ext4
+Start? 1
+End? 120000
+\end{lstlisting}
+\end{latin}
+
+هنگام تعریف پارتیشن روی این دیسک (که از ساختار \en{MBR} یا \en{Master Boot Record} پیروی می‌کند)، تعیین نوع پارتیشن (اصلی (\en{Primary}) یا توسعه‌یافته (\en{Extended})) الزامی است. سپس نقاط شروع و پایان پارتیشن را بر حسب واحد پیش‌فرض (مگابایت) وارد می‌کنیم. انتخاب مقدار ۱۲۰,۰۰۰ مگابایت برای نقطه پایان، تقریباً نیمی از ظرفیت کل دیسک را به پارتیشن اول اختصاص می‌دهد.
+
+اکنون پارتیشن دوم را با رویکردی مشابه ایجاد می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+(parted) mkpart
+Partition type?  primary/extended? primary
+File system type?  [ext2]? ntfs
+Start? 120001
+End? 240000
+\end{lstlisting}
+\end{latin}
+
+در نهایت، جهت بازبینی تغییرات اعمال شده، جدول پارتیشن را مجدداً چاپ می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+(parted) print
+Model: WDC WD25 00BEVT-00A0RT0 (scsi)
+Disk /dev/sdd: 250GB
+Sector size (logical/physical): 512B/512B
+Partition Table: msdos
+Disk Flags:
+
+Number  Start   End     Size    Type     File system  Flags
+ 1      1049kB  120GB   120GB   primary  ext4         lba
+ 2      120GB   240GB   120GB   primary  ntfs         lba
+\end{lstlisting}
+\end{latin}
+
+با اتمام موفقیت‌آمیز عملیات پارتیشن‌بندی، با دستور \cmd{quit} از محیط برنامه \cmd{parted} خارج می‌شویم:
+
+\begin{latin}
+\begin{lstlisting}
+(parted) quit
+\end{lstlisting}
+\end{latin}
+
+اکنون با اجرای مجدد دستور \cmd{lsblk} می‌توانیم دیسک و دو پارتیشن جدید ایجاد شده را در سلسله‌مراتب دستگاه‌های بلوکی مشاهده کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ lsblk
+NAME    MAJ:MIN RM     SIZE RO TYPE MOUNTPOINTS
+sda       8:0    0   111.8G  0 disk
+├─sda1    8:1    0     976M  0 part /boot/efi
+|                                   /
+└─sda3    8:3    0    14.9G  0 part [SWAP]
+sdb       8:16   0   931.5G  0 disk
+├─sdb1    8:17   0   922.2G  0 part /home
+└─sdb2    8:18   0     9.3G  0 part
+sdd       8:48   0   232.9G  0 disk
+├─sdd1    8:49   0   111.8G  0 part
+└─sdd2    8:50   0   111.8G  0 part
+sr0      11:0    1    1024M  0 rom
+\end{lstlisting}
+\end{latin}
+
+\subsection{پیکربندی سیستم فایل با استفاده از mkfs}
+
+پس از اتمام فرآیند پارتیشن‌بندی، نوبت به مرحله‌ی قالب‌بندی (\en{Formatting}) سیستم‌های فایل جدید بر روی دیسک می‌رسد. برای این مقصود از ابزار \cmd{mkfs} (مخفف \en{make file system}) بهره می‌بریم؛ دستوری جامع که امکان ایجاد انواع ساختارهای سیستم فایل را فراهم می‌کند. جهت استقرار سیستم فایل \cmd{ext4} بر روی نخستین پارتیشن، با استفاده از گزینه \cmd{-t} نوع قالب را تعیین کرده و سپس یک برچسب (\en{Label}) توصیفی به همراه نام فنی پارتیشن مربوطه را درج می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ sudo mkfs -t ext4 -L EXT4_Disk /dev/sdd1
+mke2fs 1.46.5 (30-Dec-2021)
+Creating filesystem with 29296640 4k blocks and 7331840 inodes
+Filesystem UUID: 3365d135-d8d9-4b93-a57a-ec3567c8548a
+Superblock backups stored on blocks:
+        32768, 98304, 163840, 229376, 294912, 819200, 884736, 1605632,
+        2654208, 4096000, 7962624, 11239424, 20480000, 23887872
+
+Allocating group tables:   done
+Writing inode tables:       done
+Creating journal (131072 blocks): done
+Writing superblocks and filesystem accounting information: done
+\end{lstlisting}
+\end{latin}
+
+در گام بعدی، پارتیشن دوم را برای استفاده از سیستم فایل \cmd{NTFS} آماده می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ sudo mkfs -t ntfs --quick -L NTFS_Disk /dev/sdd2
+Cluster size has been automatically set to 4096 bytes.
+Creating NTFS volume structures.
+mkntfs completed successfully. Have a nice day.
+\end{lstlisting}
+\end{latin}
+
+در این فرمان نیز نوع سیستم فایل، برچسب شناسایی و مسیر دستگاه مشخص شده است. استفاده از گزینه‌ی \cmd{--quick} باعث می‌شود سیستم‌عامل از پایش طولانی‌مدت بلوک‌های آسیب‌دیده (\en{Bad Blocks}) صرف‌نظر کرده و فرآیند قالب‌بندی را با سرعت بالاتری به اتمام برساند.
+
+شایان ذکر است که هر سیستم فایل متناسب با معماری خود، از گزینه‌های پیکربندی متفاوتی پشتیبانی می‌کند. جهت بررسی دقیق پارامترهای اختصاصی، مطالعه‌ی مستندات راهنما (\en{Man pages}) برای هر یک از انواع \cmd{mkfs} (مانند \cmd{mkfs.ext4} یا \cmd{mkfs.ntfs}) توصیه می‌شود.
+
+در این مرحله، پیکربندی دیسک به پایان رسیده است. برای اطمینان از صحت عملکرد، دستگاه را از سیستم جدا کرده و مجدداً متصل می‌کنیم تا زیرسیستم‌های خودکار لینوکس، فرآیند متصل کردن (\en{Mount}) را انجام دهند. با اجرای دوباره دستور \cmd{lsblk} می‌توان وضعیت نهایی را مشاهده کرد:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ lsblk
+NAME    MAJ:MIN RM     SIZE RO TYPE MOUNTPOINTS
+sda       8:0    0   111.8G  0 disk
+├─sda1    8:1    0     976M  0 part /boot/efi
+|                                   /
+└─sda3    8:3    0    14.9G  0 part [SWAP]
+sdb       8:16   0   931.5G  0 disk
+├─sdb1    8:17   0   922.2G  0 part /home
+└─sdb2    8:18   0     9.3G  0 part
+sdd       8:48   0   232.9G  0 disk
+├─sdd1    8:49   0   111.8G  0 part /media/me/EXT4_Disk
+└─sdd2    8:50   0   111.8G  0 part /media/me/NTFS_Disk
+sr0      11:0    1    1024M  0 rom
+\end{lstlisting}
+\end{latin}
+
+همان‌طور که در خروجی مشهود است، سیستم‌عامل از برچسب‌های تعیین‌شده (\en{Volume Labels}) برای نام‌گذاری خودکار نقاط اتصال در دایرکتوری \file{/media/} استفاده کرده است؛ این مسیر محل استاندارد لینوکس برای استقرار موقت رسانه‌های ذخیره‌سازی قابل‌حمل محسوب می‌شود.
+
+\section{عیب‌یابی و ترمیم سیستم‌های فایل}
+
+در تحلیل ساختار فایل \file{/etc/fstab} که پیش‌تر بررسی شد، ارقام انتهای هر سطر همواره پرسش‌برانگیز بوده‌اند. این اعداد در واقع پارامترهای کنترلی برای فرآیند خودکار بررسی سلامت سیستم‌های فایل هنگام بوت شدن سیستم هستند. این وظیفه بر عهدهٔ ابزار کلیدی \cmd{fsck} (مخفف \en{File System Check}) است. آخرین عدد در هر ورودی \file{fstab} (ستون ششم)، اولویت و ترتیب زمانی بررسی دستگاه‌ها را تعیین می‌کند. مطابق مثال‌های قبلی، معمولاً ابتدا سیستم فایل ریشه (\cmd{/}) و در ادامه پارتیشن‌های \file{/home} و \file{/boot} پایش می‌شوند؛ در حالی که مقدار صفر برای این ستون به معنای صرف‌نظر کردن از بررسی خودکار آن در زمان راه‌اندازی است.
+
+علاوه بر پایش وضعیت سلامت، ابزار \cmd{fsck} قادر است سیستم‌های فایل آسیب‌دیده را بسته به عمق خرابی ترمیم کند. در سیستم‌های فایل خانوادهٔ \cmd{ext} (مانند \cmd{ext2}، \cmd{ext3} و \cmd{ext4}) و همچنین \cmd{f2fs}، قطعات بازیابی شده از فایل‌های آسیب‌دیده که امکان بازگشت به مکان اولیه خود را ندارند، در دایرکتوری ویژه‌ای به نام \file{lost+found} در ریشهٔ همان پارتیشن ذخیره می‌شوند. لازم به ذکر است که این دایرکتوری مختص این نوع سیستم‌های فایل است و در انواع دیگر مانند \en{XFS} یا \en{NTFS} به این شکل وجود ندارد.
+
+جهت اجرای عملیات بررسی روی پارتیشن \file{EXT4\_Disk} (که مستلزم انفصال یا \en{Unmount} بودن دستگاه است)، از دستورات زیر استفاده می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ sudo umount /dev/sdd1
+[me@linuxbox ~]$ sudo fsck /dev/sdd1
+fsck from util-linux 2.37.2
+e2fsck 1.46.5 (30-Dec-2021)
+EXT4_Disk: clean, 11/7331840 files, 606693/29296640 blocks
+\end{lstlisting}
+\end{latin}
+
+در دنیای مدرن، به دلیل پایداری بالای سیستم‌های فایل ژورنالی (\en{Journaling File Systems})، بروز خرابی در داده‌ها به ندرت رخ می‌دهد و اغلب ناشی از نقص‌های فیزیکی سخت‌افزار یا قطع ناگهانی برق است. با این حال، چنانچه سیستم‌عامل در زمان بوت متوجه عدم انطباق داده‌ها شود، فرآیند راه‌اندازی را متوقف کرده و کاربر را جهت اجرای دستی \cmd{fsck} و رفع خطاهای احتمالی به کنسول مدیریتی هدایت می‌کند.
+
+\subsection{ریشه‌شناسی و جایگاه fsck در فرهنگ لینوکس}
+
+در خرده‌فرهنگ یونیکس و لینوکس، واژه‌ی \cmd{fsck} جایگاهی فراتر از یک دستور ساده‌ی سیستمی دارد و در میان کاربران باتجربه، اغلب به‌عنوان جایگزینی طنزآمیز برای یک واژه‌ی رکیکِ رایج در زبان انگلیسی شناخته می‌شود که از نظر آوایی، شباهت قابل‌توجهی به آن دارد.
+
+این شباهتِ آوایی، انتخابی کاملاً هوشمندانه و به‌جا به نظر می‌رسد؛ چرا که در مدیریت سیستم، رسیدن به نقطه‌ای که کاربر ناگزیر از اجرای دستی و اضطراریِ \cmd{fsck} شود، معمولاً به این معناست که سیستم‌فایل دچار ناهنجاری یا خرابیِ داده (\en{Data Corruption}) شده است. در چنین لحظه‌ی بحرانی و پراسترسی، احتمال زیادی وجود دارد که همان واژه‌ی رکیکِ هم‌آوا، از سرِ کلافگی و بی‌اختیار، بر زبان کاربر جاری شود.
+
+\section{انتقال مستقیم داده‌ها در سطح Block-Level}
+
+در حالی که ما به‌طور معمول داده‌ها را در قالب فایل‌های سازمان‌یافته مشاهده می‌کنیم، امکان تعامل با آن‌ها به‌صورت «خام» (\en{Raw Data}) نیز وجود دارد. از دیدگاه سیستمی، یک دیسک مجموعه‌ای عظیم از «بلاک‌های» داده است که سیستم‌عامل آن‌ها را به‌صورت دایرکتوری و فایل تفسیر می‌کند. با نگاه به دیسک به‌عنوان جریانی از بلاک‌های خام، می‌توان عملیات‌های پیشرفته‌ای نظیر شبیه‌سازی کامل (\en{Cloning}) یک دستگاه ذخیره‌سازی را انجام داد.
+
+ابزار \cmd{dd} دقیقاً برای همین مقصود طراحی شده است؛ این برنامه بلاک‌های داده را مستقیماً از یک مبدأ به یک مقصد کپی می‌کند. دستور \cmd{dd} به دلایل تاریخی از نحو (\en{Syntax}) متفاوتی نسبت به سایر دستورات لینوکس پیروی می‌کند:
+
+\begin{latin}
+\begin{lstlisting}
+dd if=input_file of=output_file [bs=block_size] [count=blocks]
+\end{lstlisting}
+\end{latin}
+
+\begin{warning}
+\textbf{هشدار:} دستور \cmd{dd} فوق‌العاده قدرتمند و در عین حال خطرناک است. اگرچه نام آن از \en{``Data Definition''} گرفته شده، اما در ادبیات لینوکس به شوخی از آن با عنوان \en{``Destroy Disk''} یاد می‌شود؛ چرا که یک اشتباه کوچک در تعیین مسیر ورودی (\cmd{if}) یا خروجی (\cmd{of}) می‌تواند منجر به نابودی آنی تمامی داده‌های یک درایو شود. همیشه پیش از فشردن کلید \en{Enter}، مسیرها را با دقت بازبینی کنید!
+\end{warning}
+
+فرض کنید دو حافظه‌ی فلش با ظرفیت یکسان در اختیار دارید و قصد دارید تمامی محتوای یکی را بر روی دیگری شبیه‌سازی کنید. اگر دستگاه‌ها به‌ترتیب با شناسه‌های \file{/dev/sdb} و \file{/dev/sdc} در سیستم نگاشت شده باشند، دستور زیر تمام بلاک‌های داده را منتقل می‌کند:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ sudo dd if=/dev/sdb of=/dev/sdc
+\end{lstlisting}
+\end{latin}
+
+همچنین، اگر تنها دستگاه مبدأ متصل باشد، می‌توانید یک نسخه‌ی پشتیبان کامل (\en{Image}) از آن تهیه کرده و در یک فایل معمولی ذخیره کنید:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ sudo dd if=/dev/sdb of=flash_drive.img
+\end{lstlisting}
+\end{latin}
+
+\section{فرآیند ایجاد دیسک ایمیج (ISO)}
+
+آماده‌سازی یک دیسک نوری (مانند \en{CD-R} یا \en{CD-RW}) به‌طور معمول شامل دو مرحله‌ی فنی مجزا و پیاپی است. مرحله‌ی نخست، ساخت فایل ایمیج (\en{ISO Image}) است؛ یعنی ایجاد یک فایل واحد که بازنمایی دقیق و سکتور-به-سکتور (\en{Sector-by-Sector}) از محتوا و ساختار سیستم‌فایلِ دیسک نوری را در خود جای می‌دهد. مرحله‌ی دوم، رایت کردن (\en{Writing}) این ایمیج است؛ فرآیندی که طی آن، محتوای فایل ایمیج بر روی رسانه‌ی فیزیکی نگاشته و نوشته می‌شود. این دو مرحله از یکدیگر مستقل‌اند؛ به این معنا که فایل ایمیج پس از ساخته‌شدن، می‌تواند بدون محدودیت، چندین بار بر روی دیسک‌های مختلف رایت شود.
+
+\subsection{شبیه‌سازی و ایجاد ایمیج از دیسک نوری}
+
+چنانچه قصد دارید یک فایل ایمیج (\en{ISO}) از یک لوح فشرده (\en{CD-ROM}) موجود تهیه کنید، می‌توانید از توانمندی دستور \cmd{dd} برای خواندن تمامی بلاک‌های داده در سطح پایین (\en{Low-level}) و انتقال آن‌ها به یک فایل محلی بهره ببرید. برای مثال، فرض کنید یک دیسک نصب اوبونتو در اختیار دارید و می‌خواهید یک فایل \en{ISO} از آن استخراج کنید تا در آینده جهت تکثیر دیسک‌های بیشتر از آن استفاده نمایید. پس از قرار دادن دیسک در درایو نوری و شناسایی نام فنی آن (در اینجا به عنوان مثال: \file{/dev/cdrom})، دستور زیر فرآیند نمونه‌برداری را آغاز می‌کند:
+
+\begin{latin}
+\begin{lstlisting}
+dd if=/dev/cdrom of=ubuntu.iso
+\end{lstlisting}
+\end{latin}
+
+شایان ذکر است که این روش برای دیسک‌های \en{DVD} حاوی داده (\en{Data DVD}) نیز کاملاً کارآمد است؛ اما برای لوح‌های فشرده‌ی صوتی (\en{Audio CDs}) کاربردی نخواهد داشت، چرا که این نوع رسانه‌ها از سیستم‌های فایل متعارف برای ذخیره‌سازی استفاده نمی‌کنند. جهت مدیریت و استخراج محتوای دیسک‌های صوتی، استفاده از ابزار تخصصی \cmd{cdrdao} توصیه می‌شود.
+
+\subsection{ایجاد دیسک ایمیج از مجموعه‌ای از فایل‌ها}
+
+برای تولید یک فایل ایمیج \en{ISO} که دربرگیرنده محتوای یک دایرکتوری مشخص باشد، از ابزار \cmd{genisoimage} استفاده می‌شود. فرآیند کار بدین صورت است که ابتدا تمام فایل‌های مورد نظر را در یک دایرکتوری مجزا گردآوری کرده و سپس با اجرای دستور \cmd{genisoimage} نسخه ایمیج آن را استخراج می‌کنیم. به‌طور مثال، اگر دایرکتوری \file{\textasciitilde/cd-rom-files} را برای این منظور آماده کرده باشیم، با دستور زیر فایل \file{cd-rom.iso} تولید خواهد شد:
+
+\begin{latin}
+\begin{lstlisting}
+genisoimage -o cd-rom.iso -R -J ~/cd-rom-files
+\end{lstlisting}
+\end{latin}
+
+در این دستور، گزینه \cmd{-R} اطلاعات الحاقی را بر اساس استانداردهای \en{Rock Ridge} به ایمیج اضافه می‌کند؛ این افزونه امکان پشتیبانی از نام‌های طولانی فایل و حفظ مجوزهای دسترسی \en{POSIX} (مشابه سیستم‌های یونیکسی) را فراهم می‌آورد. همچنین، استفاده از گزینه \cmd{-J} افزونه‌های \en{Joliet} را فعال می‌کند که سازگاری نام فایل‌های بلند را در محیط سیستم‌عامل ویندوز تضمین می‌نماید.
+
+\subsection{ریشه‌شناسی و تحولات توسعه ابزارهای نوری}
+
+چنانچه در منابع آموزشی آنلاین پیرامون فرآیند تولید و رایت رسانه‌های نوری (\en{CD-ROM} و \en{DVD}) جست‌وجو کنید، به احتمال فراوان با دو عنوان \cmd{mkisofs} و \cmd{cdrecord} مواجه خواهید شد. این برنامه‌ها در ابتدا بخشی از مجموعه ابزار محبوب و کاربردی \cmd{cdrtools} بودند که توسط یورگ شیلینگ (\en{Jörg Schilling}) توسعه یافته بود. با این حال، در تابستان سال ۲۰۰۶، آقای شیلینگ تغییراتی در مجوز (\en{License}) بخش‌هایی از این مجموعه اعمال کرد که از دیدگاه بسیاری از فعالان جامعه‌ی لینوکس، با اصول مجوز عمومی همگانی گنو (\en{GNU GPL}) ناسازگار تلقی شد.
+
+در پی این چالش‌های حقوقی، پروژه‌ی \cmd{cdrtools} منشعب (\en{Fork}) شد و نسخه‌های جایگزین و آزادی تحت عناوین \cmd{wodim} (به‌جای \cmd{cdrecord}) و \cmd{genisoimage} (به‌جای \cmd{mkisofs}) پدید آمدند که امروزه به‌صورت پیش‌فرض در اکثر توزیع‌های لینوکس مورد استفاده قرار می‌گیرند.
+
+\section{رایت کردن فایل‌های ایمیج بر روی رسانه‌های نوری}
+
+پس از اتمام فرآیند تولید فایل ایمیج (\en{ISO})، نوبت به انتقال و ثبت آن بر روی رسانه‌ی نوری (\en{Burn}) فرا می‌رسد. شایان ذکر است که اکثر دستورالعمل‌ها و ابزارهای خط فرمانی که در ادامه بررسی خواهیم کرد، با هر دو استاندارد \en{CD} و \en{DVD} سازگاری کامل دارند و فرآیند یکسانی را دنبال می‌کنند.
+
+\subsection{بارگذاری مستقیم فایل ایمیج ISO}
+
+قابلیت کاربردی و هوشمندانه‌ای در لینوکس وجود دارد که به ما اجازه می‌دهد یک فایل \en{ISO} را بدون نیاز به نگارش بر روی رسانه‌ی فیزیکی، مستقیماً در سیستم متصل (\en{Mount}) کنیم؛ به‌گونه‌ای که سیستم‌عامل با آن مشابه یک دیسک نوری واقعی رفتار کند. با افزودن گزینه‌ی \cmd{-o loop} به دستور \cmd{mount} و تعیین نوع سیستم فایل \cmd{iso9660} (استاندارد دیسک‌های نوری)، می‌توان فایل ایمیج را به عنوان یک «دستگاه حلقه‌ای» (\en{Loop Device}) به درخت‌واره سیستم فایل متصل کرد:
+
+\begin{latin}
+\begin{lstlisting}
+mkdir /mnt/iso_image
+mount -t iso9660 -o loop image.iso /mnt/iso_image
+\end{lstlisting}
+\end{latin}
+
+در نمونه‌ی فوق، ابتدا یک نقطه اتصال (\en{Mount Point}) تحت عنوان \file{/mnt/iso\_image/} ایجاد شده و سپس فایل \file{image.iso} در آن مسیر نگاشت گردیده است. پس از اجرای این فرآیند، محتویات فایل ایمیج دقیقاً مانند یک \en{CD-ROM} یا \en{DVD} فیزیکی در دسترس خواهد بود. لازم به ذکر است که پس از پایان عملیات، جهت آزادسازی منابع سیستمی، باید فایل ایمیج را با دستور \cmd{umount} از حالت بارگذاری خارج کنید.
+
+\subsection{پاک‌سازی دیسک‌های نوری با قابلیت بازنویسی}
+
+رسانه‌های \en{CD-RW} (قابل بازنویسی) پیش از آنکه برای ذخیره‌سازی مجدد آماده شوند، نیازمند عملیات پاک‌سازی یا تخلیه داده هستند. برای اجرای این فرآیند، از ابزار \cmd{wodim} استفاده می‌کنیم که در آن باید مسیر فنی دستگاهِ رایتر و روش پاک‌سازی مورد نظر را تعیین کرد. برنامه \cmd{wodim} چندین روش برای این کار ارائه می‌دهد که بهینه‌ترین و سریع‌ترین آن‌ها، روش \cmd{fast} است:
+
+\begin{latin}
+\begin{lstlisting}
+wodim dev=/dev/cdrw blank=fast
+\end{lstlisting}
+\end{latin}
+
+در این فرمان، پارامتر \cmd{dev} مسیر دستگاه رایتر را مشخص کرده و گزینه \cmd{blank=fast} تنها جداول محتوای دیسک را حذف می‌کند تا دیسک در کمترین زمان ممکن برای نوشتن داده‌های جدید آماده شود.
+
+\subsection{رایت کردن فایل ایمیج بر روی دیسک نوری}
+
+جهت نگارش (\en{Burn}) یک فایل ایمیج بر روی رسانه، بار دیگر از ابزار \cmd{wodim} بهره می‌گیریم. در این مرحله، تعیین شناسه‌ی فنی دستگاه رایتر و مسیر فایل ایمیج \en{ISO} الزامی است:
+
+\begin{latin}
+\begin{lstlisting}
+wodim dev=/dev/cdrw image.iso
+\end{lstlisting}
+\end{latin}
+
+افزون بر پارامترهای پایه، \cmd{wodim} از طیف گسترده‌ای از گزینه‌های کاربردی پشتیبانی می‌کند. دو مورد از پرکاربردترین آن‌ها عبارتند از: \cmd{-v} که جهت مشاهده‌ی گزارش‌ (\en{Verbose}) از روند پیشرفت عملیات به کار می‌رود، و \cmd{-dao} که دیسک را در حالت \en{Disk-at-Once} می‌نویسد. این روش نگارش به‌ویژه زمانی اهمیت دارد که قصد تهیه نسخه‌ی مستر (\en{Master}) برای تکثیر تجاری را داشته باشید. در مقابل، حالت پیش‌فرض این برنامه \en{Track-at-Once} است که بیشتر برای ضبط جداگانه‌ی ترک‌های موسیقی (\en{Audio Tracks}) کاربرد دارد.
+
+\section{تأیید صحت و یکپارچگی داده‌ها}
+
+در ادامه بحث پیرامون فایل‌های \en{ISO}، شایسته است به چگونگی بررسی یکپارچگی (\en{Integrity}) فایل‌های دانلود شده بپردازیم. هنگام دریافت فایل‌های حجیم، نظیر ایمیج نصب توزیع‌های لینوکس، اطمینان از کامل بودن فایل و عدم بروز خرابی در داده‌ها (\en{Data Corruption}) طی فرآیند انتقال امری حیاتی است. ابزار \cmd{sha256sum} به عنوان جایگزینی مدرن و امن‌تر برای ابزار قدیمی \cmd{md5sum} جهت این اعتبارسنجی به کار می‌رود.
+
+برای درک بهتر، فرآیند را با مثالی عملی بررسی می‌کنیم: فرض کنید قصد دانلود ایمیج نصب \en{Linux Mint 22} را دارید. پس از دریافت فایل \file{linuxmint-22-cinnamon-64bit.iso} از وب‌سایت رسمی، فایل متنی حاوی چک‌سام‌ها (\en{Checksums}) را نیز با نام \file{sha256sum.txt} دانلود می‌کنید. محتوای این فایل به شرح زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ cat sha256sum.txt
+7a04b54830004e945c1eda6ed6ec8c57ff4b249de4b331bd021a849694f29b8f *linuxmint-22-cinnamon-64bit.iso
+78a2438346cfe69a1779b0ac3fc05499f8dc7202959d597dd724a07475bc6930 *linuxmint-22-mate-64bit.iso
+55e917b99206187564029476f421b98f5a8a0b6e54c49ff6a4cb39dcfeb4bd80 *linuxmint-22-xfce-64bit.iso
+\end{lstlisting}
+\end{latin}
+
+این رشته‌های هگزادسیمال طولانی، چک‌سام نامیده می‌شوند که بازنمایی ریاضی منحصربه‌فردی از محتوای هر فایل هستند. ویژگی کلیدی این الگوریتم‌ها در آن است که حتی اگر تنها یک «بیت» از فایل \en{ISO} با نسخه‌ی اصلی تفاوت داشته باشد، خروجی هش (\en{Hash}) به کلی تغییر خواهد کرد. برای اعتبارسنجی فایل دانلود شده، دستور زیر را اجرا می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ sha256sum -b linuxmint-22-cinnamon-64bit.iso
+7a04b54830004e945c1eda6ed6ec8c57ff4b249de4b331bd021a849694f29b8f *linuxmint-22-cinnamon-64bit.iso
+\end{lstlisting}
+\end{latin}
+
+گزینه \cmd{-b} به برنامه اعلام می‌کند که فایل مورد نظر از نوع باینری (\en{Binary}) است. با تطبیق بصری خروجی و مقدار موجود در فایل متنی، صحت فایل تأیید می‌شود. با این حال، تطبیق دستی برای تعداد زیاد فایل‌ها دشوار است؛ روش بهینه‌تر، استفاده از قابلیت خودکار \cmd{sha256sum} برای مقایسه‌ی مقادیر درج شده در فایل مرجع با فایل‌های موجود در دیسک است:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ sha256sum -c --ignore-missing sha256sum.txt
+linuxmint-22-cinnamon-64bit.iso: OK
+\end{lstlisting}
+\end{latin}
+
+در این فرمان، گزینه‌ی \cmd{-c} (مخفف \en{check}) فرآیند تطبیق خودکار را فعال کرده و گزینه \cmd{--ignore-missing} به برنامه دستور می‌دهد تا از اعلان خطا برای فایل‌هایی که دانلود نکرده‌ایم (مانند نسخه‌های \en{MATE} یا \en{XFCE}) صرف‌نظر کند.
+
+\section{جمع‌بندی}
+
+در این فصل، به بررسی وظایف کلیدی و بنیادین در حوزه‌ی مدیریت ذخیره‌سازها پرداختیم. بدیهی است که این مباحث تنها نقطه‌ی آغازین هستند؛ سیستم‌عامل لینوکس از طیف گسترده‌ای از سخت‌افزارهای ذخیره‌سازی و معماری‌های پیشرفته‌ی سیستم فایل پشتیبانی می‌کند و قابلیت‌های متعددی را برای تعامل و سازگاری با سایر سیستم‌های عامل در اختیار کاربران قرار می‌دهد.
+
+\section{منابع مطالعه تکمیلی}
+
+توصیه می‌شود حتماً مستندات راهنما (\en{Manual Pages}) مربوط به دستورات معرفی‌شده را مطالعه کنید؛ چرا که بسیاری از این ابزارها از پارامترها و عملیات‌های تخصصی فراوانی پشتیبانی می‌کنند که بررسی آن‌ها در این فصل نمی‌گنجد. همچنین، آموزش‌های آنلاین بی‌شماری برای پیکربندی درایوهای سخت جدید و مدیریت رسانه‌های نوری در محیط لینوکس در دسترس است.
+
+آرچ‌ویکی مقاله‌ی خوبی درباره‌ی پارتیشن‌بندی دارد:
+
+\begin{latin}
+\url{https://wiki.archlinux.org/title/Partitioning}
+\end{latin}
+
+راهنمای کامل کاربران \en{GNU Parted} نیز در آدرس زیر در دسترس است:
+
+\begin{latin}
+\url{https://www.gnu.org/software/parted/manual/parted.html}
+\end{latin}
+
+مقاله‌ای در ویکی‌پدیا درباره‌ی چک‌سام‌ها:
+
+\begin{latin}
+\url{https://en.wikipedia.org/wiki/Checksum}
+\end{latin}
+
+مقاله‌ای در ویکی‌پدیا نیز درباره‌ی \en{SCSI} (\en{Small Computer System Interface}) موجود است:
+
+\begin{latin}
+\url{https://en.wikipedia.org/wiki/SCSI}
+\end{latin}

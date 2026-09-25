@@ -1,0 +1,275 @@
+\chapter{کنترل جریان با حلقه for}
+
+در این فصل پایانی از مبحث کنترل جریان، به یکی دیگر از ساختارهای حلقه‌ای پوسته می‌پردازیم. حلقه‌ی \cmd{for} با حلقه‌های \cmd{while} و \cmd{until} این تفاوت را دارد که روشی برای پردازش توالی‌ها (\en{Sequences}) در طول اجرای حلقه فراهم می‌کند. این ویژگی در عمل برنامه‌نویسی بسیار کاربردی است؛ به همین دلیل، حلقه‌ی \cmd{for} یکی از ساختارهای پرکاربرد در اسکریپت‌نویسی \cmd{bash} به شمار می‌رود.
+
+حلقه‌ی \cmd{for}، همان‌گونه که از نامش پیداست، با فرمان مرکب \cmd{for} پیاده‌سازی می‌شود. در \cmd{bash}، این دستور به دو صورت قابل استفاده است.
+
+\section{حلقه for (شکل سنتی در پوسته)}
+
+دستور اصلی \cmd{for} دارای نحو (\en{syntax}) زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+for variable [in words]; do
+      commands
+done
+\end{lstlisting}
+\end{latin}
+
+در این ساختار، \file{variable} نام متغیری است که در هر گام از تکرار، مقداری جدید می‌پذیرد. \file{words} فهرستی اختیاری از آیتم‌هاست که به ترتیب به متغیر تخصیص می‌یابند و \file{commands} مجموعه‌دستوراتی هستند که در هر تکرار اجرا می‌شوند.
+
+عملکرد این دستور را می‌توان به‌سادگی در خط فرمان مشاهده کرد:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ for i in A B C D; do echo $i; done
+A
+B
+C
+D
+\end{lstlisting}
+\end{latin}
+
+در این مثال، فهرست حاوی چهار کلمه (\en{A} تا \en{D}) است؛ در نتیجه حلقه چهار بار تکرار شده و در هر نوبت، یکی از این مقادیر در متغیر \cmd{i} جای می‌گیرد. کلیدواژه \cmd{done} نیز همانند سایر حلقه‌ها، پایان بلوک تکرار را اعلام می‌کند.
+
+نقطه قوت اصلی حلقه \cmd{for} در روش‌های متنوع تولید فهرست کلمات نهفته است. برای نمونه، می‌توان از بسط آکولاد (\en{Brace Expansion}) استفاده کرد:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ for i in {A..D}; do echo $i; done
+A
+B
+C
+D
+\end{lstlisting}
+\end{latin}
+
+همچنین، استفاده از بسط مسیر (\en{Pathname Expansion}) یکی از رایج‌ترین کاربردهای این حلقه برای مدیریت فایل‌هاست:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ for i in distros*.txt; do echo "$i"; done
+distros-by-date.txt
+distros-dates.txt
+distros-key-names.txt
+distros-key-vernums.txt
+distros-names.txt
+distros.txt
+distros-vernums.txt
+distros-versions.txt
+\end{lstlisting}
+\end{latin}
+
+هنگام استفاده از نویسه‌های جانشین، باید به یک نکته توجه داشت: اگر بسط با هیچ فایلی مطابقت نداشته باشد، \en{Bash} به‌طور پیش‌فرض خودِ عبارت الگو (مثلاً \cmd{distros*.txt}) را برمی‌گرداند. برای پیشگیری از بروز خطا در اسکریپت‌ها، توصیه می‌شود از یک ساختار کنترلی داخلی استفاده کنید:
+
+\begin{latin}
+\begin{lstlisting}
+for i in distros*.txt; do
+    if [[ -e "$i" ]]; then
+        echo "$i"
+    fi
+done
+\end{lstlisting}
+\end{latin}
+
+با افزودن این شرط (\cmd{-e})، اطمینان حاصل می‌شود که تنها در صورت وجود خارجی فایل، دستورات بدنه حلقه اجرا می‌گردند و از پردازش الگوهای ناموفق اجتناب می‌شود.
+
+الگوی رایج دیگر برای تولید فهرست کلمات، بهره‌گیری از جایگزینی فرمان (\en{Command Substitution}) است. در مثال زیر، اسکریپتی برای یافتن طولانی‌ترین رشته متنی در یک فایل طراحی شده است:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# longest-word: find longest string in a file
+
+while [[ -n "$1" ]]; do
+    if [[ -r "$1" ]]; then
+        max_word=
+        max_len=0
+        for i in $(strings "$1"); do
+            len="$(echo -n "$i" | wc -c)"
+            if (( len > max_len )); then
+                max_len="$len"
+                max_word="$i"
+            fi
+        done
+        echo "$1: '$max_word' ($max_len characters)"
+    fi
+    shift
+done
+\end{lstlisting}
+\end{latin}
+
+در این نمونه، هدف شناسایی طولانی‌ترین رشته در فایل‌های ورودی است. با ارسال نام فایل‌ها از طریق خط فرمان، برنامه با استفاده از ابزار \cmd{strings} (از مجموعه \en{GNU binutils})، فهرستی از کلمات متنی قابل خواندن را استخراج می‌کند. حلقه \cmd{for} هر کلمه را پیمایش کرده و طول آن را با طولانی‌ترین کلمه قبلی مقایسه می‌کند. در نهایت، با اتمام حلقه، رشته برگزیده به همراه طول آن چاپ می‌شود.
+
+نکته حائز اهمیت در این کد، عدم استفاده از کوتیشن پیرامون عبارت \cmd{\$(strings "\$1")} است. برخلاف توصیه‌های عمومی، در اینجا آگاهانه از دابل‌کوتیشن استفاده نشده تا فرآیند تفکیک کلمات (\en{Word Splitting}) توسط پوسته انجام شود و فهرستی از کلمات مجزا به دست آید. چنانچه این عبارت داخل کوتیشن قرار می‌گرفت، کل محتوای فایل به عنوان یک رشته واحد تلقی می‌شد که با منطق برنامه در تضاد است.
+
+در صورتی که بخش اختیاری \cmd{in words} از دستور \cmd{for} حذف شود، این ساختار به‌طور پیش‌فرض به پارامترهای موقعیتی (\en{Positional Parameters}) رجوع می‌کند. بر همین اساس، اسکریپت قبلی را می‌توان به شکل بهینه‌تر زیر بازنویسی کرد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# longest-word2: find longest string in a file
+
+for i; do
+    if [[ -r "$i" ]]; then
+        max_word=
+        max_len=0
+        for j in $(strings "$i"); do
+            len="$(echo -n "$j" | wc -c)"
+            if (( len > max_len )); then
+                max_len="$len"
+                max_word="$j"
+            fi
+        done
+        echo "$i: '$max_word' ($max_len characters)"
+    fi
+done
+\end{lstlisting}
+\end{latin}
+
+در این نگارش، حلقه بیرونی از \cmd{while} به \cmd{for} تغییر یافته است. با حذف صریح فهرست کلمات، حلقه \cmd{for} مستقیماً آرگومان‌های خط فرمان را پیمایش می‌کند. این تغییر باعث شده است که متغیر حلقه‌ی داخلی برای جلوگیری از تداخل به \cmd{j} تغییر یابد و نیاز به استفاده از دستور \cmd{shift} نیز مرتفع گردد.
+
+\section{فلسفه نام‌گذاری متغیر شمارنده i}
+
+ممکن است متوجه شده باشید که در تمامی مثال‌های پیشین مربوط به حلقه \cmd{for} از متغیر \cmd{i} استفاده شده است. در واقع برای این انتخاب هیچ الزام فنی خاصی وجود ندارد و صرفاً پیرو یک سنت دیرینه در دنیای برنامه‌نویسی است. اگرچه هر نام متغیر معتبری می‌تواند در ساختار \cmd{for} به کار رود، اما \cmd{i} رایج‌ترین انتخاب است و پس از آن معمولاً حروف \cmd{j} و \cmd{k} در اولویت قرار می‌گیرند.
+
+ریشه این سنت به زبان برنامه‌نویسی \en{Fortran} بازمی‌گردد. در قواعد نحوی \en{Fortran}، متغیرهایی که بدون اعلان صریح نوع داده و با حروف \en{I}، \en{J}، \en{K}، \en{L}، \en{M} یا \en{N} آغاز می‌شدند، به‌طور خودکار به عنوان عدد صحیح (\en{Integer}) در نظر گرفته می‌شدند؛ در حالی که متغیرهای شروع‌شده با سایر حروف، از نوع حقیقی (\en{Real}) تلقی می‌شدند که معمولاً به صورت ممیز شناور پیاده‌سازی می‌شود. این ویژگی باعث شد برنامه‌نویسان برای متغیرهای حلقه (که ماهیتی موقت دارند و معمولاً عدد صحیح هستند)، از حروف \en{I}، \en{J} و \en{K} استفاده کنند تا از پیچیدگی کدنویسی و نیاز به اعلان دستی نوع متغیر کاسته شود.
+
+\section{حلقه for به سبک زبان C}
+
+نسخه‌های متأخر \en{Bash} از نحو (\en{Syntax}) دومی برای دستور \cmd{for} پشتیبانی می‌کنند که شباهت بسیاری به ساختار حلقه‌ها در زبان برنامه‌نویسی \en{C} دارد. این فرم که در بسیاری از زبان‌های برنامه‌نویسی مدرن نیز پذیرفته شده است، برای مدیریت تکرارهای مبتنی بر محاسبات عددی بسیار کارآمد است.
+
+نحو کلی این دستور به شرح زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+for (( expression1; expression2; expression3 )); do
+      commands
+done
+\end{lstlisting}
+\end{latin}
+
+در این الگو، سه عبارت عددی (\file{expression1} تا \file{expression3}) منطق حلقه را کنترل می‌کنند و \file{commands} مجموعه‌دستوراتی هستند که در هر تکرار اجرا می‌شوند. از نظر منطق اجرایی، این ساختار دقیقاً با الگوی زیر در حلقه \cmd{while} برابری می‌کند:
+
+\begin{latin}
+\begin{lstlisting}
+(( expression1 ))
+while (( expression2 )); do
+      commands
+      (( expression3 ))
+done
+\end{lstlisting}
+\end{latin}
+
+تحلیل وظایف هر عبارت:
+
+\begin{itemize}
+  \item \textbf{\file{expression1} (مقداردهی اولیه):} برای تعیین وضعیت آغازین حلقه (مانند تعریف مقدار اولیه شمارنده) به کار می‌رود.
+  \item \textbf{\file{expression2} (شرط تداوم):} مشخص می‌کند که حلقه تا چه زمانی باید به تکرار ادامه دهد.
+  \item \textbf{\file{expression3} (گام تکرار):} عملیاتی است که در پایان هر دور از حلقه (معمولاً برای تغییر مقدار شمارنده) اجرا می‌شود.
+\end{itemize}
+
+در ادامه، یک نمونه پیاده‌سازی عملی برای شمارش اعداد ارائه شده است:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# simple_counter: demo of C style for command
+
+for (( i=0; i<5; i=i+1 )); do
+    echo $i
+done
+\end{lstlisting}
+\end{latin}
+
+خروجی حاصل از اجرای اسکریپت به صورت زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ simple_counter
+0
+1
+2
+3
+4
+\end{lstlisting}
+\end{latin}
+
+در این مثال، ابتدا متغیر \cmd{i} با مقدار \cmd{0} مقداردهی می‌شود. حلقه تا زمانی که مقدار \cmd{i} کمتر از \cmd{5} باشد به کار خود ادامه می‌دهد و در پایان هر مرحله، یک واحد به مقدار \cmd{i} افزوده می‌شود. استفاده از این سبک در سناریوهایی که با توالی‌های عددی دقیق سروکار دارید، بسیار سودمند است و در مباحث آتی، کاربردهای پیشرفته‌تری از آن را بررسی خواهیم کرد.
+
+\section{جمع‌بندی}
+
+با تکیه بر دانش فنی حاصل از بررسی دستور \cmd{for}، اکنون می‌توانیم آخرین اصلاحات ساختاری را در اسکریپت \cmd{sys\_info\_page} اعمال کنیم. در حال حاضر، تابع \cmd{report\_home\_space} به صورت زیر پیاده‌سازی شده است:
+
+\begin{latin}
+\begin{lstlisting}
+report_home_space () {
+    if [[ "$(id -u)" -eq 0 ]]; then
+        cat << _EOF_
+      <h2>Home Space Utilization (All Users)</h2>
+      <pre>$(du -sh /home/*)</pre>
+_EOF_
+    else
+        cat << _EOF_
+      <h2>Home Space Utilization ($USER)</h2>
+      <pre>$(du -sh "$HOME")</pre>
+_EOF_
+    fi
+    return
+}
+\end{lstlisting}
+\end{latin}
+
+در گام نهایی، این تابع را بازنویسی می‌کنیم تا تحلیل دقیق‌تری از دایرکتوری خانگی (\en{Home Directory}) کاربران ارائه دهد. این نسخه جدید علاوه بر حجم مصرفی، تعداد کل فایل‌ها و دایرکتوری‌های فرعی موجود در هر مسیر را نیز محاسبه و گزارش می‌کند:
+
+\begin{latin}
+\begin{lstlisting}
+report_home_space () {
+    local format="%8s%10s%10s\n"
+    local i dir_list total_files total_dirs total_size user_name
+
+    if [[ "$(id -u)" -eq 0 ]]; then
+        dir_list=/home/*
+        user_name="All Users"
+    else
+        dir_list="$HOME"
+        user_name="$USER"
+    fi
+
+    echo "<h2>Home Space Utilization ($user_name)</h2>"
+
+    for i in $dir_list; do
+        total_files="$(find "$i" -type f | wc -l)"
+        total_dirs="$(find "$i" -type d | wc -l)"
+        total_size="$(du -sh "$i" | cut -f 1)"
+
+        echo "<H3>$i</H3>"
+        echo "<pre>"
+        printf "$format" "Dirs" "Files" "Size"
+        printf "$format" "----" "-----" "----"
+        printf "$format" "$total_dirs" "$total_files" "$total_size"
+        echo "</pre>"
+    done
+    return
+}
+\end{lstlisting}
+\end{latin}
+
+این بازنویسی، مجموعه‌ای از مفاهیم کلیدی که تاکنون فراگرفته‌ایم را با هم تلفیق می‌کند. در این ساختار، همچنان سطح دسترسی کاربر (\en{Root} یا غیر از آن) ارزیابی می‌شود، اما به‌جای اجرای مستقیم دستورات در بلوک \cmd{if}، متغیرهای مورد نیاز برای پردازش در حلقه \cmd{for} مقداردهی می‌شوند. استفاده از متغیرهای محلی (\cmd{local}) برای حفظ یکپارچگی تابع و بهره‌گیری از دستور \cmd{printf} جهت قالب‌بندی ستونی و دقیق خروجی، از ویژگی‌های بارز این نسخه ارتقایافته است.
+
+\section{منابع مطالعه تکمیلی}
+
+راهنمای پیشرفته اسکریپت‌نویسی \en{Bash} فصلی درباره حلقه‌ها (\en{loops}) دارد که شامل مجموعه‌ای متنوع از مثال‌های استفاده از حلقه \cmd{for} است:
+
+\begin{latin}
+\url{http://tldp.org/LDP/abs/html/loops1.html}
+\end{latin}
+
+راهنمای مرجع \en{Bash} دستورات مرکب حلقه‌سازی (\en{looping compound commands}) از جمله حلقه \cmd{for} را شرح می‌دهد:
+
+\begin{latin}
+\url{http://www.gnu.org/software/bash/manual/bashref.html#Looping-Constructs}
+\end{latin}

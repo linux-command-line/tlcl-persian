@@ -1,0 +1,526 @@
+\chapter{آغاز پروژه عملی}
+
+از این فصل، فرآیند توسعه‌ی یک برنامه‌ی کاربردی را آغاز خواهیم کرد. هدف از این پروژه، بررسی چگونگی به‌کارگیری قابلیت‌های متنوع «پوسته» در تولید نرم‌افزار و فراتر از آن، آموزش اصول نگارش برنامه‌های استاندارد و بهینه است.
+
+برنامه‌ای که طراحی خواهیم کرد، یک «گزارش‌گر سیستم» (\en{System Report Generator}) است. این برنامه آمارهای گوناگونی از وضعیت سیستم استخراج کرده و خروجی را در قالب یک سند \en{HTML} ارائه می‌دهد تا از طریق مرورگرهایی نظیر \en{Firefox} یا \en{Chrome} قابل مشاهده باشد.
+
+فرآیند توسعه‌ی نرم‌افزار معمولاً طی مراحل تکاملی صورت می‌پذیرد که در هر گام، ویژگی‌ها و قابلیت‌های جدیدی به هسته‌ی اصلی افزوده می‌شود. در گام نخست، برنامه‌ی ما صرفاً یک سند \en{HTML} مینیمال تولید خواهد کرد که فاقد داده‌های سیستم است؛ این جزئیات در مراحل آتی تکمیل خواهند شد.
+
+\section{گام ۱: تدوین ساختار اولیه سند}
+
+نخستین پیش‌نیاز، آشنایی با ساختار استاندارد یک سند \en{HTML} است. قالب کلی این اسناد به شرح زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+<html>
+  <head>
+    <title>Page Title</title>
+  </head>
+  <body>
+       Page body.
+  </body>
+</html>
+\end{lstlisting}
+\end{latin}
+
+چنانچه این کد را در یک ویرایشگر متن وارد کرده و با نام \file{foo.html} ذخیره نمایید، می‌توانید با استفاده از پروتکل \cmd{file} در مرورگر خود (مطابق الگوی زیر)، نتیجه را مشاهده کنید:
+
+\begin{latin}
+\begin{lstlisting}
+file:///home/username/foo.html
+\end{lstlisting}
+\end{latin}
+
+نخستین فاز از برنامه‌ی ما باید قادر باشد ساختار \en{HTML} مذکور را به «خروجی استاندارد» (\en{stdout}) ارسال کند. پیاده‌سازی چنین برنامه‌ای بسیار ساده است. ویرایشگر متن خود را باز کرده و فایل جدیدی با نام \file{\textasciitilde/bin/sys\_info\_page} ایجاد نمایید:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ vim ~/bin/sys_info_page
+\end{lstlisting}
+\end{latin}
+
+سپس کدهای زیر را در فایل وارد کنید:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# Program to output a system information page
+
+echo "<html>"
+echo "  <head>"
+echo "    <title>Page Title</title>"
+echo "  </head>"
+echo "  <body>"
+echo "    Page body."
+echo "  </body>"
+echo "</html>"
+\end{lstlisting}
+\end{latin}
+
+این نسخه اولیه شامل یک سطر \en{shebang} برای تعیین مفسر، یک توضیح (\en{Comment}) جهت مستندسازی (که همواره یک رویه‌ی حرفه‌ای است) و توالی منظمی از دستورات \cmd{echo} است که هر کدام مسئولیت تولید یک خط از خروجی را بر عهده دارند.
+
+پس از ذخیره فایل، باید مجوزهای دسترسی را تنظیم نموده و اسکریپت را تست کنید:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ chmod 755 ~/bin/sys_info_page
+[me@linuxbox ~]$ sys_info_page
+\end{lstlisting}
+\end{latin}
+
+با اجرای اسکریپت، محتوای سند \en{HTML} مستقیماً در ترمینال نمایش داده می‌شود؛ چرا که دستورات \cmd{echo} به‌طور پیش‌فرض خروجی خود را به \en{stdout} ارسال می‌کنند.
+
+اکنون برنامه را مجدداً اجرا کرده و خروجی آن را به فایلی با نام \file{sys\_info\_page.html} هدایت (\en{Redirect}) می‌کنیم تا نتیجه در مرورگر وب قابل رویت باشد:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ sys_info_page > sys_info_page.html
+[me@linuxbox ~]$ firefox sys_info_page.html
+\end{lstlisting}
+\end{latin}
+
+تا این مرحله، فرآیند به درستی طی شده است. با این حال، در دنیای برنامه‌نویسی، همواره توصیه می‌شود بر دو اصل «سادگی» و «شفافیت» تمرکز کنید. برنامه‌ای که از ساختار خوانا و منطق ساده‌تری برخوردار باشد، نه‌تنها نگهداری آسان‌تری دارد، بلکه معمولاً حجم تایپ کمتری را نیز در زمان توسعه به نویسنده تحمیل می‌کند.
+
+اگرچه نسخه‌ی فعلی اسکریپت ما به درستی عمل می‌کند، اما پتانسیل بهینه‌سازی دارد. ما می‌توانیم تمامی دستورات \cmd{echo} را در قالب یک دستور واحد ادغام کنیم؛ این رویکرد افزودن خطوط جدید به خروجی را در آینده بسیار تسهیل خواهد کرد. بنابراین، اسکریپت را به صورت زیر بازنویسی می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# Program to output a system information page
+
+echo "<html>
+    <head>
+         <title>Page Title</title>
+    </head>
+    <body>
+          Page body.
+     </body>
+</html>"
+\end{lstlisting}
+\end{latin}
+
+در ساختار پوسته، یک رشته‌ی کوتیشن‌گذاری‌شده (\en{Quoted String}) می‌تواند شامل کاراکترهای خط جدید (\en{Newline}) باشد و چندین خط متن را به صورت یکپارچه در بر گیرد. مفسر پوسته تا زمانی که به علامت کوتیشن پایانی نرسد، به خواندن متن ادامه خواهد داد.
+
+این قابلیت دقیقاً به همان صورت در محیط خط فرمان نیز قابل اجراست:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ echo "<html>
+>          <head>
+>                 <title>Page Title</title>
+>          </head>
+>          <body>
+>                 Page body.
+>          </body>
+> </html>"
+\end{lstlisting}
+\end{latin}
+
+نویسه‌ی \cmd{>} که در ابتدای سطور میانی مشاهده می‌کنید، در واقع «اعلان ثانویه» (\en{Secondary Prompt}) پوسته است که در متغیر محیطی \cmd{PS2} تعریف شده است. این اعلان زمانی ظاهر می‌شود که پوسته تشخیص دهد یک دستور هنوز کامل نشده و منتظر ورود ادامه‌ی آن در خطوط بعدی است (مانند زمانی که یک کوتیشن باز شده اما هنوز بسته نشده است).
+
+اگرچه ممکن است در حال حاضر این ویژگی صرفاً یک جزئیات فنی ساده به نظر برسد، اما در آینده و هنگام کار با ساختارهای کنترلی پیچیده و بلوک‌های برنامه‌نویسی چندخطی، ابزاری بسیار کارآمد برای مدیریت ورودی‌ها خواهد بود.
+
+\section{گام ۲: درج داده‌های اولیه در گزارش}
+
+اکنون که اسکریپت ما قادر به تولید یک سند \en{HTML} پایه است، نوبت آن رسیده تا مقداری محتوا به گزارش افزوده و ساختار آن را تکمیل کنیم. بدین منظور، تغییرات زیر را در فایل اعمال می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# Program to output a system information page
+
+echo "<html>
+        <head>
+                <title>System Information Report</title>
+        </head>
+        <body>
+                <h1>System Information Report</h1>
+        </body>
+</html>"
+\end{lstlisting}
+\end{latin}
+
+در این مرحله، ما یک عنوان برای سرآیند صفحه (\cmd{<title>}) و یک تیتر اصلی (\cmd{<h1>}) در بدنه‌ی گزارش تعریف کردیم تا هویت بصری سند شکل بگیرد.
+
+\section{مدیریت داده‌ها از طریق متغیرها و ثابت‌ها}
+
+با وجود بهبودهای صورت‌گرفته، اسکریپت ما همچنان با یک چالش ساختاری مواجه است: عبارت \en{``System Information Report''} در دو موضع متفاوت تکرار شده است. اگرچه در این اسکریپتِ کوتاه، تکرار مذکور مسئله‌ساز به نظر نمی‌رسد، اما تصور کنید در یک پروژه گسترده، این رشته در ده‌ها نقطه تکرار شده باشد. در چنین شرایطی، هرگونه تغییر در عنوان گزارش مستلزم ویرایش تک‌تک آن موارد خواهد بود که فرآیندی خطا‌پذیر و طاقت‌فرساست.
+
+بهینه ساختن اسکریپت به گونه‌ای که هر داده‌ی تکرار‌شونده تنها در یک محل تعریف شود، «قابلیت نگهداری» (\en{Maintainability}) کد را به شکل چشم‌گیری ارتقا می‌دهد. برای دستیابی به این هدف، اسکریپت را به نحو زیر بازنویسی می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# Program to output a system information page
+
+title="System Information Report"
+
+echo "<html>
+            <head>
+                    <title>$title</title>
+            </head>
+            <body>
+                    <h1>$title</h1>
+            </body>
+</html>"
+\end{lstlisting}
+\end{latin}
+
+در این نسخه، با تعریف متغیری تحت عنوان \cmd{title} و تخصیص مقدار رشته‌ای به آن، از مکانیزم «بسط پارامتر» (\en{Parameter Expansion}) بهره گرفته‌ایم. بدین ترتیب، پوسته هنگام اجرا، مقدار متغیر را به جای نام آن در کدهای \en{HTML} درج می‌کند و در صورت نیاز به تغییر عنوان، تنها اصلاح یک خط از اسکریپت کفایت خواهد کرد.
+
+فرآیند تعریف متغیر در پوسته بسیار ساده است؛ به محض ارجاع به یک نام، پوسته آن را به‌طور خودکار ایجاد می‌کند. این رفتار با بسیاری از زبان‌های برنامه‌نویسی که در آن‌ها متغیرها باید پیش از استفاده صریحاً «اعلان» (\en{Declare}) یا تعریف شوند، تفاوت بنیادی دارد. پوسته در این زمینه رویکردی بسیار منعطف دارد که البته می‌تواند منشأ بروز خطاهای منطقی در اسکریپت شود.
+
+به‌عنوان نمونه، سناریوی زیر را در خط فرمان در نظر بگیرید:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ foo="yes"
+[me@linuxbox ~]$ echo $foo
+yes
+[me@linuxbox ~]$ echo $fool
+
+[me@linuxbox ~]$
+\end{lstlisting}
+\end{latin}
+
+در این مثال، ابتدا مقدار \cmd{"yes"} را به متغیر \cmd{foo} تخصیص داده و با دستور \cmd{echo} آن را فراخوانی می‌کنیم. در گام بعد، نام متغیر را به اشتباه \cmd{fool} تایپ می‌کنیم و با یک خروجی تهی مواجه می‌شویم. علت این رخداد آن است که پوسته هنگام مواجهه با نام ناشناخته‌ی \cmd{fool}، آن را در همان لحظه ایجاد کرده و مقدار پیش‌فرض «خالی» (\en{Null/Empty}) را به آن نسبت داده است.
+
+بنابراین، دقت در املای صحیح نام متغیرها هنگام بازخوانی آن‌ها حیاتی است، چرا که پوسته هیچ هشداری مبنی بر تعریف‌نشده بودن متغیر صادر نمی‌کند.
+
+آموزه کلیدی این مثال، ضرورت دقت وسواس‌گونه در نگارش املای متغیرهاست. برای درک عمیق‌تر ریشه این خطا، باید به مکانیسم «بسط پارامترها» (\en{Parameter Expansion}) در پوسته رجوع کنیم. همان‌طور که پیش‌تر در مباحث پایه‌ای آموختیم، فرآیند بسط پیش از اجرای نهایی دستور صورت می‌گیرد. بنابراین دستور:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ echo $foo
+\end{lstlisting}
+\end{latin}
+
+توسط پوسته به شکل زیر تفسیر و جایگزین می‌شود:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ echo yes
+\end{lstlisting}
+\end{latin}
+
+در نقطه مقابل، دستور زیر:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ echo $fool
+\end{lstlisting}
+\end{latin}
+
+به این صورت بسط می‌یابد:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ echo
+\end{lstlisting}
+\end{latin}
+
+نکته حائز اهمیت این است که یک متغیر تهی به «هیچ» (\en{Null}) بسط داده می‌شود؛ گویی اصلاً وجود نداشته است. این رفتار می‌تواند منجر به شکست دستوراتی شود که حضور تعداد مشخصی آرگومان برای عملکرد آن‌ها الزامی است. سناریوی زیر را بررسی کنید:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ foo=foo.txt
+[me@linuxbox ~]$ foo1=foo1.txt
+[me@linuxbox ~]$ cp $foo $fool
+cp: missing destination file operand after `foo.txt'
+Try `cp --help' for more information.
+\end{lstlisting}
+\end{latin}
+
+در این مثال، دو متغیر را مقداردهی کرده‌ایم، اما هنگام فراخوانی دستور \cmd{cp} نام آرگومان دوم را به اشتباه تایپ نموده‌ایم. پس از مرحله بسط، دستور \cmd{cp} تنها یک آرگومان (\file{foo.txt}) دریافت می‌کند، در حالی که این دستور به‌صورت ساختاری نیازمند دو آرگومان (مبدأ و مقصد) است. این حذف ناخواسته آرگومان، منجر به بروز خطای نحوی در اجرای دستور می‌گردد.
+
+در محیط پوسته، نام‌گذاری متغیرها تابع قوانین مشخصی است که رعایت آن‌ها برای پایداری و صحت اجرای اسکریپت الزامی است:
+
+\begin{enumerate}
+  \item \textbf{نویسه‌های مجاز:} نام متغیرها می‌تواند ترکیبی از حروف الفبای انگلیسی (کوچک و بزرگ)، اعداد و کاراکتر زیرخط (\en{Underscore} \cmd{\_}) باشد.
+  \item \textbf{محدودیت شروع نام:} نخستین کاراکتر در نام یک متغیر الزاماً باید یک حرف یا کاراکتر زیرخط باشد؛ استفاده از اعداد در ابتدای نام مجاز نیست.
+  \item \textbf{ممنوعیت نویسه‌های خاص:} استفاده از هرگونه فاصله (\en{Space}) یا نمادهای نگارشی (مانند \cmd{@}، \cmd{\#}، \cmd{\$}، \cmd{\%} و غیره) در بدنه نام متغیر اکیداً ممنوع است.
+\end{enumerate}
+
+شایان ذکر است که پوسته به بزرگی و کوچکی حروف (\en{Case-sensitivity}) حساس است؛ بنابراین متغیرهای \cmd{TITLE}، \cmd{Title} و \cmd{title} سه متغیر کاملاً مجزا و متفاوت تلقی می‌شوند.
+
+واژه‌ی «متغیر» (\en{Variable}) به مقداری اشاره دارد که در طول اجرای برنامه دستخوش تغییر می‌شود. با این حال، در اسکریپت مورد بحث، پارامتر \cmd{title} در واقع نقش یک «ثابت» (\en{Constant}) را ایفا می‌کند.
+
+ثابت‌ها شباهت ساختاری کاملی به متغیرها دارند، با این تفاوت که مقدار تخصیص‌یافته به آن‌ها در سرتاسر فرآیند اجرای اسکریپت بدون تغییر باقی می‌ماند. برای مثال، در یک نرم‌افزار محاسبات ریاضی، مرسوم است که عدد \cmd{3.1415} را به ثابتی تحت عنوان \cmd{PI} اختصاص دهیم تا از درج مستقیم عدد در بخش‌های مختلف کد اجتناب شود.
+
+در محیط پوسته، تفاوت فنی و ساختاری میان متغیر و ثابت وجود ندارد و این تمایز صرفاً یک قرارداد (\en{Convention}) برای درک بهتر برنامه‌نویس است. بر اساس یک رویه‌ی استاندارد در اسکریپت‌نویسی لینوکس، نام ثابت‌ها با حروف بزرگ (\en{Upper Case}) و نام متغیرهای پویا با حروف کوچک (\en{Lower Case}) نوشته می‌شوند. در ادامه، اسکریپت خود را مطابق با این استاندارد بازنویسی می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# Program to output a system information page
+
+TITLE="System Information Report For $HOSTNAME"
+
+echo "<html>
+        <head>
+                <title>$TITLE</title>
+        </head>
+        <body>
+                <h1>$TITLE</h1>
+        </body>
+</html>"
+\end{lstlisting}
+\end{latin}
+
+در این نسخه، علاوه بر رعایت قواعد نام‌گذاری، با بهره‌گیری از متغیر محیطی \cmd{\$HOSTNAME} (که حاوی نام شبکه یا همان \en{Network Name} سیستم است)، عنوان گزارش را پویا و تخصصی‌تر کردیم.
+
+\begin{note}
+\textbf{نکته:} پوسته قابلیتی برای تثبیت مقدار متغیرها فراهم کرده است که از طریق دستور داخلی \cmd{declare} و گزینه \cmd{-r} (مخفف \en{Read-only}) پیاده‌سازی می‌شود. چنانچه متغیری مانند \cmd{TITLE} را به این صورت تعریف کنیم: \cmd{declare -r TITLE="Page Title"} پوسته اجازه نخواهد داد هیچ مقدار جدیدی در طول اجرای برنامه به \cmd{TITLE} اختصاص یابد. این ویژگی اگرچه در اسکریپت‌های معمول به‌ندرت استفاده می‌شود، اما در پروژه‌های سیستمی حساس و رسمی نقشی حیاتی دارد.
+\end{note}
+
+\section{تخصیص مقدار به متغیرها و ثابت‌ها}
+
+در این بخش، دانش ما درباره‌ی مفاهیم «بسط» (\en{Expansion}) اهمیت خود را نشان می‌دهد. همان‌طور که پیش‌تر دیدیم، مقداردهی به متغیرها طبق الگوی \cmd{variable=value} انجام می‌شود که در آن \file{variable} نام متغیر و \file{value} یک رشته است. برخلاف بسیاری از زبان‌های برنامه‌نویسی، پوسته نسبت به «نوع داده» (\en{Data Type}) حساسیت ندارد و تمامی مقادیر را به‌صورت رشته (\en{String}) تلقی می‌کند. هرچند با استفاده از دستور \cmd{declare -i} می‌توان پوسته را وادار کرد تا یک متغیر را منحصراً به مقادیر عددی (\en{Integer}) اختصاص دهد، اما این رویکرد نیز مشابه تعریف متغیرهای «فقط‌خواندنی»، در اسکریپت‌نویسی متداول چندان رایج نیست.
+
+شایان ذکر است که هنگام تخصیص مقدار، نباید هیچ‌گونه فاصله‌ای (\en{Space}) بین نام متغیر، علامت مساوی و مقدار وجود داشته باشد. مقدار تخصیصی می‌تواند شامل هر عبارتی باشد که قابلیت بسط به رشته را دارد:
+
+\begin{latin}
+\begin{lstlisting}
+a=z                    # Assign the string "z" to variable a.
+b="a string"           # Embedded spaces must be within quotes.
+c="a string and $b"    # Other expansions such as variables can be
+                       # expanded into the assignment.
+d="$(ls -l foo.txt)"   # Results of a command.
+e=$((5 * 7))           # Arithmetic expansion.
+f="\t\ta string\n"     # Escape sequences such as tabs and newlines.
+\end{lstlisting}
+\end{latin}
+
+همچنین می‌توان چندین متغیر را در یک سطر واحد مقداردهی کرد:
+
+\begin{latin}
+\begin{lstlisting}
+a=5 b="a string"
+\end{lstlisting}
+\end{latin}
+
+در فرآیند بسط، نام متغیرها می‌تواند جهت ابهام‌زدایی درون آکولاد \cmd{\{\}} محصور شود. این رویکرد زمانی کاربرد دارد که نام متغیر در مجاورت نویسه‌هایی قرار گیرد که ممکن است توسط پوسته به‌عنوان بخشی از نام متغیر تلقی شوند. برای مثال، جهت تغییر نام فایل از \file{myfile} به \file{myfile1} با استفاده از متغیر:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ filename="myfile"
+[me@linuxbox ~]$ touch "$filename"
+[me@linuxbox ~]$ mv "$filename" "$filename1"
+mv: missing destination file operand after `myfile'
+Try `mv --help' for more information.
+\end{lstlisting}
+\end{latin}
+
+این عملیات با شکست مواجه می‌شود؛ زیرا پوسته آرگومان دوم دستور \cmd{mv} را به‌عنوان یک متغیر جدید (و تهی) به نام \cmd{filename1} تفسیر می‌کند. برای رفع این مشکل، از ساختار زیر استفاده می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ mv "$filename" "${filename}1"
+\end{lstlisting}
+\end{latin}
+
+با استفاده از آکولاد، مرز نام متغیر برای پوسته مشخص شده و عدد \cmd{1} دیگر بخشی از نام متغیر در نظر گرفته نمی‌شود.
+
+\begin{note}
+\textbf{نکته:} همواره توصیه می‌شود متغیرها و نتایج حاصل از «جایگزینی فرمان (\en{Command Substitution})» را درون دابل‌کوتیشن (\cmd{" "}) قرار دهید. این کار باعث مهار اثرات جانبی «تفکیک کلمات» (\en{Word Splitting}) توسط پوسته می‌شود. رعایت این اصل به‌ویژه زمانی که متغیر حاوی نام فایل‌هایی با فواصل خالی است، اهمیت حیاتی دارد.
+\end{note}
+
+در این مرحله، با بهره‌گیری از مفاهیمی که آموختیم، داده‌های پویای بیشتری شامل زمان دقیق تهیه گزارش و نام کاربر جاری را به خروجی اضافه می‌کنیم:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# Program to output a system information page
+
+TITLE="System Information Report For $HOSTNAME"
+CURRENT_TIME="$(date +"%x %r %Z")"
+TIMESTAMP="Generated $CURRENT_TIME, by $USER"
+
+echo "<html>
+        <head>
+                <title>$TITLE</title>
+        </head>
+        <body>
+                <h1>$TITLE</h1>
+                <p>$TIMESTAMP</p>
+        </body>
+</html>"
+\end{lstlisting}
+\end{latin}
+
+\section{مفاهیم و کاربرد Here Documents در Bash}
+
+در این بخش، با روش سومی برای تولید خروجی متنی در اسکریپت‌ها آشنا می‌شویم که تحت عنوان \en{Here Document} (یا به‌اختصار \en{Here-doc}) شناخته می‌شود. این تکنیک در واقع نوعی «بازهدایت ورودی» (\en{Input Redirection}) است که به برنامه‌نویس اجازه می‌دهد یک بلوک متنی چندخطی را مستقیماً درون بدنه اسکریپت تعریف کرده و آن را به‌عنوان «ورودی استاندارد» (\en{stdin}) به یک دستور ارسال نماید.
+
+الگوی کلی پیاده‌سازی این قابلیت به شرح زیر است:
+
+\begin{latin}
+\begin{lstlisting}
+command << token
+text
+token
+\end{lstlisting}
+\end{latin}
+
+در این ساختار، \file{command} دستوری است که ورودی استاندارد (\en{stdin}) را می‌پذیرد (مانند \cmd{cat}، \cmd{ftp}، \cmd{sed}، \cmd{awk} و غیره). واژه‌ی \en{TOKEN} نیز به‌عنوان یک شناسه یا «جداکننده» (\en{Delimiter}) عمل می‌کند؛ این شناسه می‌تواند هر رشته‌ی دلخواهی باشد، مشروط بر اینکه در ابتدا و انتهای بلوک متنی به‌صورت دقیقاً یکسان و بدون فواصل اضافی درج شود.
+
+نمونه‌ی بازنویسی‌شده‌ی اسکریپت با استفاده از این روش:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# Program to output a system information page
+
+TITLE="System Information Report For $HOSTNAME"
+CURRENT_TIME="$(date +"%x %r %Z")"
+TIMESTAMP="Generated $CURRENT_TIME, by $USER"
+
+cat << _EOF_
+<html>
+        <head>
+               <title>$TITLE</title>
+        </head>
+        <body>
+               <h1>$TITLE</h1>
+               <p>$TIMESTAMP</p>
+        </body>
+</html>
+_EOF_
+\end{lstlisting}
+\end{latin}
+
+در این پیاده‌سازی:
+
+\begin{itemize}
+  \item به‌جای استفاده از چندین دستور \cmd{echo} یا یک رشته‌ی طولانی کوتیشن‌گذاری شده، از دستور \cmd{cat} به‌همراه تکنیک \en{Here Document} بهره گرفته‌ایم.
+  \item عبارت \cmd{\_EOF\_} (مخفف \en{End Of File}) به‌عنوان نشانگر پایان بلوک متنی تعیین شده است. خروجی نهایی، یک سند \en{HTML} استاندارد حاوی متغیرهای محیطی و اطلاعات کاربر خواهد بود.
+\end{itemize}
+
+استفاده از \en{Here Document} در اسکریپت‌نویسی پوسته، مزایای متعددی به همراه دارد که مدیریت خروجی‌های متنی را به‌طور چشم‌گیری تسهیل می‌کند. این تکنیک با فراهم آوردن امکان نگارش بلوک‌های متنی چندخطی به‌شکلی خوانا و منسجم، جایگزینی کارآمد برای دستورات مکرر \cmd{echo} محسوب می‌شود. از سوی دیگر، درون \en{Here Document}، تک‌کوتیشن‌ها (\cmd{'}) و دابل‌کوتیشن‌ها (\cmd{"}) معنای ویژه‌ی خود را در پوسته از دست داده و به‌عنوان نویسه‌های عادی تلقی می‌شوند؛ بدین‌ترتیب، کاربر می‌تواند بدون نیاز به نویسه‌های گریز (\cmd{\textbackslash}) از آن‌ها استفاده کند. افزون بر این، بسط متغیرها و جایگزینی فرمان‌ها به‌صورت پیش‌فرض در بدنه متن پشتیبانی می‌شود و امکان تعامل با طیف وسیعی از دستورات (فراتر از \cmd{cat}) که ورودی استاندارد را می‌پذیرند، انعطاف‌پذیری عملیاتی این روش را دوچندان می‌کند.
+
+در مثال زیر، نحوه‌ی برخورد پوسته با انواع نویسه‌های کنترلی درون یک بلوک \en{Here Document} بررسی شده است:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ foo="some text"
+[me@linuxbox ~]$ cat << _EOF_
+> $foo
+> "$foo"
+> '$foo'
+> \$foo
+> _EOF_
+some text
+"some text"
+'some text'
+$foo
+\end{lstlisting}
+\end{latin}
+
+همان‌طور که در خروجی مشهود است:
+
+\begin{itemize}
+  \item تمامی تک‌کوتیشن‌ها (\cmd{'}) و دابل‌کوتیشن‌ها (\cmd{"}) عیناً و بدون تغییر در خروجی چاپ شده‌اند.
+  \item متغیر \cmd{foo} به‌درستی بسط یافته و مقدار رشته‌ای آن جایگزین شده است.
+  \item با استفاده از نویسه گریز (\cmd{\textbackslash}) پیش از علامت \cmd{\$} در سطر آخر، از بسط متغیر جلوگیری شده و نام خود متغیر به‌صورت متنی چاپ شده است.
+\end{itemize}
+
+چنانچه نشانگر جداکننده (\en{Delimiter}) را درون کوتیشن قرار دهیم، پوسته فرآیند بسط پارامترها را متوقف می‌کند:
+
+\begin{latin}
+\begin{lstlisting}
+cat << '_EOF_'
+\end{lstlisting}
+\end{latin}
+
+در این حالت، خروجی دقیقاً مطابق با متن ورودی خواهد بود:
+
+\begin{latin}
+\begin{lstlisting}
+[me@linuxbox ~]$ foo="some text"
+[me@linuxbox ~]$ cat << '_EOF_'
+> $foo
+> "$foo"
+> '$foo'
+> \$foo
+> _EOF_
+$foo
+"$foo"
+'$foo'
+\$foo
+\end{lstlisting}
+\end{latin}
+
+در مثال زیر، از تکنیک \en{Here Document} برای خودکارسازی فرآیند دریافت فایل از یک سرور \en{FTP} استفاده شده است:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# Script to retrieve a file via FTP
+
+FTP_SERVER="ftp.nl.debian.org"
+FTP_PATH="/debian/dists/stretch/main/installer-amd64/current/images/cdrom"
+REMOTE_FILE="debian-cd_info.tar.gz"
+
+ftp -n << _EOF_
+open $FTP_SERVER
+user anonymous me@linuxbox
+cd $FTP_PATH
+hash
+get $REMOTE_FILE
+bye
+_EOF_
+ls -l "$REMOTE_FILE"
+\end{lstlisting}
+\end{latin}
+
+این اسکریپت بدون نیاز به مداخله کاربر، عملیات اتصال و بارگیری را انجام می‌دهد. تمامی دستورات اختصاصی پروتکل \en{FTP} در بدنه \en{Here Document} محصور شده‌اند.
+
+برای حفظ خوانایی و ساختار سلسله‌مراتبی کد، می‌توان از عملگر \cmd{<<-} بهره برد:
+
+\begin{latin}
+\begin{lstlisting}
+#!/bin/bash
+
+# Script to retrieve a file via FTP
+
+FTP_SERVER="ftp.nl.debian.org"
+FTP_PATH="/debian/dists/stretch/main/installer-amd64/current/images/cdrom"
+REMOTE_FILE="debian-cd_info.tar.gz"
+
+ftp -n <<- _EOF_
+    open $FTP_SERVER
+    user anonymous me@linuxbox
+    cd $FTP_PATH
+    hash
+    get $REMOTE_FILE
+    bye
+    _EOF_
+ls -l "$REMOTE_FILE"
+\end{lstlisting}
+\end{latin}
+
+با جایگزینی \cmd{<<-} به جای \cmd{<<}، پوسته کاراکترهای \en{Tab} ابتدای هر خط را نادیده می‌گیرد. این ویژگی به برنامه‌نویس اجازه می‌دهد بدون ایجاد اختلال در مقدار نهایی متن یا شکستن نشانگر انتها، از تورفتگی (\en{Indentation}) استفاده کند. لازم به ذکر است که این قابلیت منحصراً برای کاراکتر \en{Tab} تعریف شده و شامل کاراکتر فاصله (\en{Space}) نمی‌شود.
+
+\section{جمع‌بندی}
+
+در این فصل، مفاهیم متغیرها و ثابت‌ها را معرفی کرده و نحوه‌ی به‌کارگیری آن‌ها را بررسی کردیم. این مفاهیم، نخستین نمونه از کاربردهای گسترده‌ای هستند که در ادامه با بسط پارامتر (\en{Parameter Expansion}) مواجه خواهیم شد. همچنین روش‌های تولید خروجی از اسکریپت و شیوه‌های گوناگون درج بلوک‌های متنی را مورد بررسی قرار دادیم.
+
+\section{منابع مطالعه تکمیلی}
+
+برای اطلاعات بیشتر درباره \en{HTML}، به مقالات و خودآموزهای زیر مراجعه کنید:
+
+\begin{latin}
+\url{http://en.wikipedia.org/wiki/Html}\\
+\url{http://en.wikibooks.org/wiki/HTML_Programming}\\
+\url{http://html.net/tutorials/html/}
+\end{latin}
+
+صفحه راهنمای \cmd{bash} شامل بخشی با عنوان \en{``HERE DOCUMENTS''} است که شرح کاملی از این قابلیت را ارائه می‌دهد.

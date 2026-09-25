@@ -1,0 +1,46 @@
+\onehalfspacing
+\setlength{\parindent}{1.2em}
+\setlength{\parskip}{0.35em}
+\tolerance=1500
+\emergencystretch=2.5em
+\hbadness=2000
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\small\itshape\leftmark}
+\fancyhead[RO]{\small\itshape\rightmark}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyfoot[C]{\thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+}
+\titleformat{\part}[display]
+  {\centering\Huge\bfseries}
+  {\partname\ \thepart}
+  {1.2cm}
+  {\Huge\bfseries}
+\titlespacing*{\part}{0pt}{-2cm}{2cm}
+\titleformat{\chapter}[display]
+  {\normalfont\Huge\bfseries\centering}
+  {\chaptername\ \thechapter}
+  {0.8cm}
+  {\Huge\bfseries}
+\titlespacing*{\chapter}{0pt}{-1.5cm}{1.5cm}
+\titleformat{\section}
+  {\normalfont\Large\bfseries}
+  {\thesection}{0.8em}{}
+\titlespacing*{\section}{0pt}{1.2em}{0.6em}
+
+\titleformat{\subsection}
+  {\normalfont\large\bfseries}
+  {\thesubsection}{0.7em}{}
+\titlespacing*{\subsection}{0pt}{1em}{0.4em}
+
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries}
+  {\thesubsubsection}{0.6em}{}
+\titlespacing*{\subsubsection}{0pt}{0.8em}{0.3em}
+\setlist[itemize]{topsep=0.3em,itemsep=0.15em,parsep=0pt}
+\setlist[enumerate]{topsep=0.3em,itemsep=0.15em,parsep=0pt}

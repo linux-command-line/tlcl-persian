@@ -1,0 +1,54 @@
+\definecolor{codebg}{RGB}{248,248,248}
+\definecolor{codeframe}{RGB}{200,200,200}
+\definecolor{notebg}{RGB}{240,247,255}
+\definecolor{noteframe}{RGB}{80,130,200}
+\definecolor{warnbg}{RGB}{255,245,240}
+\definecolor{warnframe}{RGB}{200,80,60}
+\lstdefinestyle{shell}{
+  basicstyle       = \ttfamily\small,
+  breaklines       = true,
+  columns          = fullflexible,
+  keepspaces       = true,
+  showstringspaces = false,
+  frame            = single,
+  framerule        = 0.4pt,
+  rulecolor        = \color{codeframe},
+  backgroundcolor  = \color{codebg},
+  xleftmargin      = 0.8em,
+  xrightmargin     = 0.8em,
+  framexleftmargin = 0.8em,
+  framexrightmargin= 0.8em,
+  aboveskip        = 0.7em,
+  belowskip        = 0.7em,
+  literate         = {*}{\ensuremath{\ast}}1
+}
+\lstset{style=shell}
+\newtcblisting{codebox}{
+  listing only,
+  listing engine = listings,
+  colback        = codebg,
+  colframe       = codeframe,
+  boxrule        = 0.4pt,
+  arc            = 2mm,
+  left           = 2mm, right=2mm, top=2mm, bottom=2mm,
+  breakable,
+  listing options = {style=shell, frame=none, backgroundcolor=, xleftmargin=0pt, xrightmargin=0pt}
+}
+\newtcolorbox{note}{
+  colback   = notebg,
+  colframe  = noteframe,
+  boxrule   = 0.4pt,
+  arc       = 2mm,
+  left=3mm, right=3mm, top=2mm, bottom=2mm,
+  breakable,
+  fonttitle = \bfseries,
+}
+\newtcolorbox{warning}{
+  colback   = warnbg,
+  colframe  = warnframe,
+  boxrule   = 0.4pt,
+  arc       = 2mm,
+  left=3mm, right=3mm, top=2mm, bottom=2mm,
+  breakable,
+  fonttitle = \bfseries,
+}
