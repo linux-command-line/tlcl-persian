@@ -2,7 +2,7 @@
 
   <img src="https://raw.githubusercontent.com/linux-command-line/tlcl-persian/main/images/cover.webp" alt="کتاب خط فرمان لینوکس - ترجمه فارسی The Linux Command Line" width="220" style="border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
 
-  # خط فرمان لینوکس | The Linux Command Line
+  # کتاب خط فرمان لینوکس | The Linux Command Line
   ### ترجمهٔ فارسی با اخذ اجازهٔ رسمی از صاحب حقوق اثر<br>Persian Translation — Published with Official Permission
 
   <p align="center">
@@ -16,11 +16,11 @@
     <a href="http://creativecommons.org/licenses/by-nc-nd/3.0/"><img src="https://img.shields.io/badge/License-CC%20BY--NC--ND%203.0-orange?style=for-the-badge&logo=creativecomms" alt="License"></a>
   </p>
 
-  <p align="center">
-    <a href="https://github.com/linux-command-line/tlcl-persian/releases/latest/download/tlcl-persian-1st-edition.pdf">
-      <img src="https://img.shields.io/badge/📄_دانلود_فایل_PDF-Download_PDF-107C41?style=for-the-badge" alt="دانلود فایل PDF">
-    </a>
-  </p>
+<div align="center" style="margin: 25px 0;">
+  <a href="https://github.com/linux-command-line/tlcl-persian/releases/latest/download/tlcl-persian-1st-edition.pdf" target="_blank">
+    <img src="https://img.shields.io/badge/⬇️%20دانلود%20فایل%20PDF%20%7C%20Download%20PDF-2EA44F?style=for-the-badge&logo=adobe-acrobat-reader&logoColor=white" alt="دانلود فایل PDF کتاب خط فرمان لینوکس" height="52">
+  </a>
+</div>
 
   ---
 
