@@ -16,11 +16,13 @@
     <a href="http://creativecommons.org/licenses/by-nc-nd/3.0/"><img src="https://img.shields.io/badge/License-CC%20BY--NC--ND%203.0-orange?style=for-the-badge&logo=creativecomms" alt="License"></a>
   </p>
 
-<div align="center" style="margin: 25px 0;">
-  <a href="https://github.com/linux-command-line/tlcl-persian/releases/latest/download/tlcl-persian-1st-edition.pdf" target="_blank">
-    <img src="https://img.shields.io/badge/⬇️%20دانلود%20فایل%20PDF%20%7C%20Download%20PDF-2EA44F?style=for-the-badge&logo=adobe-acrobat-reader&logoColor=white" alt="دانلود فایل PDF کتاب خط فرمان لینوکس" height="52">
+<p align="center" style="margin: 35px 0;">
+  <a href="https://github.com/linux-command-line/tlcl-persian/releases/latest/download/tlcl-persian-1st-edition.pdf" target="_blank" style="text-decoration: none;">
+    <font size="6" color="#0969DA">
+      <b>📥 دانلود فایل PDF | Download PDF</b>
+    </font>
   </a>
-</div>
+</p>
 
   ---
 
