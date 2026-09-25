@@ -16,14 +16,13 @@
     <a href="http://creativecommons.org/licenses/by-nc-nd/3.0/"><img src="https://img.shields.io/badge/License-CC%20BY--NC--ND%203.0-orange?style=for-the-badge&logo=creativecomms" alt="License"></a>
   </p>
 
-<div align="center" style="margin: 35px 0;">
-  <a href="https://github.com/linux-command-line/tlcl-persian/releases/latest/download/tlcl-persian-1st-edition.pdf" target="_blank" style="text-decoration: none;">
-    <h1>📥 دانلود فایل PDF</h1>
-    <hr width="300" size="1" color="#d9383a" style="margin: 10px auto;">
-    <h1>Download PDF File 📥</h1>
+<p align="center">
+  <a href="https://github.com/linux-command-line/tlcl-persian/releases/latest/download/tlcl-persian-1st-edition.pdf">
+    <font size="6"><b>📥 دانلود فایل PDF</b></font><br>
+    ━━━━━ ✤ ━━━━━<br>
+    <font size="6"><b>Download PDF File 📥</b></font>
   </a>
-</div>
-
+</p>
   ---
 
   <p align="center">
