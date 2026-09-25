@@ -18,7 +18,7 @@
 
 <p align="center">
   <a href="https://github.com/linux-command-line/tlcl-persian/releases/latest/download/tlcl-persian-1st-edition.pdf">
-    <font size="6"><b>📥 دانلود فایل PDF</b></font><br>
+    <font size="6"><b>📥 دانلود  فایل  PDF</b></font><br>
     ━━━━━ ✤ ━━━━━<br>
     <font size="6"><b>Download PDF File</b></font>
   </a>
